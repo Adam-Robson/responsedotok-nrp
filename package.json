@@ -1,0 +1,22 @@
+{
+  "name": "nrp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Adam Robson <adamrayrobson@gmail.com>",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@biomejs/biome": "2.4.10",
+    "@types/node": "25.5.2",
+    "typescript": "6.0.2",
+    "vitest": "4.1.2"
+  }
+}
