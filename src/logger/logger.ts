@@ -48,12 +48,8 @@ export class Logger {
     
     if (l === 'error' || l === 'warn') {
       process.stderr.write(`${line}\n`);
-
-      console.error(line);
     } else {
       process.stdout.write(`${line}\n`);
-      
-      console.info(line);
     }
   }
 }

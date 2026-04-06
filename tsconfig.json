@@ -4,7 +4,7 @@
     "module":"nodenext",
     "target":"es2022",
     "lib": ["es2022", "dom"],
-    "types": ["node"],
+    "types": ["node", "vitest"],
     "rootDir": "./",
     "declaration": true,
     "declarationMap": true,
@@ -20,6 +20,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests", "scripts"]
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist", "scripts"]
 }
