@@ -10,6 +10,6 @@
 export interface Upstream {
 	host: string;
 	port: number;
-	protocol?: "http" | "https";
+	protocol?: 'http' | 'https';
 	weight?: number;
 }

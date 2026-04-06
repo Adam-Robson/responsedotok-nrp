@@ -1,3 +1,7 @@
+import type { Route } from './route.js';
+import type { HeaderRules } from './header-rules.js';
+import type { LoadBalancerStrategy } from './load-balancer-strategy.js';
+
 /**
  * Global configuration types.
  * 
@@ -9,11 +13,6 @@
  * @property {number} [timeout] - Proxy request timeout - default 30000ms (30sec).
  * @property {string[]} [fowardIp] - IP addresses to forward in the X-Forwarded-For header - default true. 
  */
-
-import type { Route } from './route.js';
-import type { HeaderRules } from './header-rules.js';
-import type { LoadBalancerStrategy } from './load-balancer-strategy.js';
-
 
 export interface ConfigType {
     port: number;
