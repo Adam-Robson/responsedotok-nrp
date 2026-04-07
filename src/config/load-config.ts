@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { Config } from './config.js';
-import type { ConfigType } from '../lib/types/config';
+import type { ConfigType } from '../lib/types/config.js';
 
 export async function loadConfig(filePath: string): Promise<ConfigType> {
 	const absolutePath = path.resolve(filePath);

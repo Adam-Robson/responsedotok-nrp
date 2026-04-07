@@ -1,4 +1,4 @@
-import { LEVELS, type LogLevel, type Log } from '../lib/types/log';
+import { LEVELS, type LogLevel, type Log } from '../lib/types/log.js';
 
 /**
  * Emit logs in JSOn format to stdout and stderr at levels debug, info, warn and error.

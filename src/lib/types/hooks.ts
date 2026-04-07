@@ -1,4 +1,4 @@
-import type { Context } from './context';
+import type { Context } from './context.js';
 
 /**
  * Hook function type definition. A hook is a function that can be executed at

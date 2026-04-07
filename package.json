@@ -8,8 +8,8 @@
 	"types": "dist/src/index.d.ts",
   "directories": {
     "src": "src",
-    "test": "tests"
-
+    "test": "tests",
+    "scripts": "scripts"
   },
 	"exports": {
 		".": {
@@ -31,8 +31,7 @@
 		"build": "node scripts/build.mjs",
 		"dev": "tsc --watch",
 		"test": "vitest",
-		"lint": "biome check src",
-		"format": "biome format --write src",
+		"biome": "biome check src && biome format --write src",
 		"prepublishOnly": "npm run build && npm run test",
 		"start": "node dist/src/index.js"
 	},

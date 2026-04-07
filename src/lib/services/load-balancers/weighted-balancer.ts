@@ -1,4 +1,4 @@
-import { LoadBalancer } from './load-balancer';
+import { LoadBalancer } from './load-balancer.js';
 import type { Upstream } from '../../types/upstream.js';
 
 /**

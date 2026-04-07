@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROOT = new URL('', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 
 /**
  * Execute a shell command asynchronously in the root.
@@ -15,7 +15,7 @@ const ROOT = new URL('', import.meta.url).pathname.replace(/\/$/, '');
 
 export function run(cmd) {
   console.info(`$ ${cmd}`);
-  return execSync(cmd, { cwd: ROOT, stdio: 'inherit' }).toString();
+  execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
 }
 
 /**
@@ -81,13 +81,17 @@ export function esmify(dir) {
 			renames.set(file, esmFile);
 		}
 	});
+  renames.forEach((esmFile, file) => {
+    fs.renameSync(file, esmFile);
+  });
+
 
 	// second pass
 	walk(dir, (file) => {
 		if (!file.endsWith(".mjs") && !file.endsWith(".d.ts")) return;
 		let src = fs.readFileSync(file, "utf-8");
 		src = src.replace(
-			/(from\s+["'])(\.{1,2}\/[^"']+?)\.js("'])/g,
+			/(from\s+["'])(\.{1,2}\/[^"']+?)\.js(["'])/g,
 			"$1$2.mjs$3",
 		);
 		src = src.replace(
@@ -174,3 +178,5 @@ export function build(dir) {
     process.exit(1);
   }
 }
+
+build(path.join(ROOT, 'dist'));

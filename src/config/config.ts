@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { ConfigType } from '../lib/types/config';
+import type { ConfigType } from '../lib/types/config.js';
 
 /**
  * Configure global settings.
