@@ -11,14 +11,14 @@ import type { HeaderRules } from '../../types/header-rules.js';
  * It merges global header rules with route-specific header rules, and ensures that
  * hop-by-hop headers are stripped from requests before they are sent to upstream servers.
  * It also handles the forwarding of client IP information via the X-Forwarded-For header.
- * @param {HeaderRules | null} globalRules - The global header rules to apply to all requests and responses.
+ * @param {HeaderRules | undefined} globalRules - The global header rules to apply to all requests and responses.
  * @param {boolean} forwardIp - Whether to forward the client's IP address in the X-Forwarded-For header.
  * @returns {HeaderService} An instance of the HeaderService class.
  */
 
-export class HeaderService {
+export class HeadersService {
    constructor(
-    private readonly globalRules: HeaderRules | null,
+    private readonly globalRules: HeaderRules | undefined,
     private readonly forwardIp: boolean,
   ) {}
 
@@ -33,7 +33,7 @@ export class HeaderService {
 
   buildRequestHeaders(
     req: IncomingMessage,
-    routeRules: HeaderRules | null,
+    routeRules: HeaderRules | undefined,
     upstream: { host: string; port: number },
   ): IncomingHttpHeaders {
     const headers: IncomingHttpHeaders = { ...req.headers };
@@ -69,7 +69,7 @@ export class HeaderService {
 
   applyResponseHeaders(
     res: ServerResponse,
-    routeRules: HeaderRules | null
+    routeRules: HeaderRules | undefined
   ): void {
     for (const key of [
       ...(this.globalRules?.removeResponse ?? []),
@@ -99,6 +99,9 @@ export class HeaderService {
         delete headers[name.trim().toLowerCase()];
       }
     }
+    for (const name of HOP_BY_HOP_HEADERS) {
+      delete headers[name];
+    }
   }
   
   /**
@@ -111,7 +114,7 @@ export class HeaderService {
 
   private applyRules(
     headers: IncomingHttpHeaders,
-    rules: HeaderRules | null | undefined,
+    rules: HeaderRules | undefined,
     direction: "request" | "response",
   ): void {
     if (!rules) return;
