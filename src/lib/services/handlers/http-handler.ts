@@ -1,15 +1,14 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import http from 'node:http';
 import https from 'node:https';
-import { HealthService } from '..//health/health-service.js';
+import { HealthService } from '../health/health-service.js';
 import { HeadersService } from '../headers/headers-service.js';
-import { LoadBalancer } from '../load-balancers/load-balancer.js';
-import { isMatch } from '../../../utils/is-match.js';
+import { createBalancer } from '../load-balancers/create-balancer.js';
 import { matchRoute } from '../../../utils/match-route.js';
-import {rewritePath} from '../../../utils/rewrite-path.js';
+import { rewritePath } from '../../../utils/rewrite-path.js';
 import { LoadBalancerStrategy } from '../../types/load-balancer-strategy.js';
 
-import type { LoadBalancerType } from '../../types/load-balancer.js';
+import type { LoadBalancer } from '../load-balancers/load-balancer.js';
 import type { ConfigType } from '../../types/config.js';
 import type { Context } from '../../types/context.js';
 import type { Hooks } from '../../types/hooks.js';
@@ -17,8 +16,8 @@ import type { Upstream } from '../../types/upstream.js';
 
 export class HttpHandler {
   
-  private readonly balancers = new Map<string, LoadBalancerType>();
-  private readonly globalBalancer: LoadBalancerType;
+  private readonly balancers = new Map<string, LoadBalancer>();
+  private readonly globalBalancer: LoadBalancer;
   private readonly httpAgent = new http.Agent({ keepAlive: true });
   private readonly httpsAgent = new https.Agent({ keepAlive: true });
   private readonly healthService: HealthService;
@@ -27,7 +26,7 @@ export class HttpHandler {
 		readonly config: ConfigType,
 		private readonly hooks: Hooks = {},
 	) {
-		this.globalBalancer = LoadBalancer.create(config.balancer ?? LoadBalancerStrategy.RoundRobin);
+		this.globalBalancer = createBalancer(config.balancer ?? LoadBalancerStrategy.RoundRobin);
 
     const allUpstreams = [
       ...new Map(
@@ -235,7 +234,7 @@ export class HttpHandler {
 		if (!this.balancers.has(key)) {
 			this.balancers.set(
 				key,
-				LoadBalancer.create(route.balancer as LoadBalancerStrategy),
+				createBalancer(route.balancer as LoadBalancerStrategy),
 			);
 		}
 		const balancer = this.balancers.get(key);
