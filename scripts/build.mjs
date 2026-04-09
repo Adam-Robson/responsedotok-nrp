@@ -7,7 +7,7 @@ import path from 'node:path';
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 
 /**
- * Execute a shell command asynchronously in the root.
+ * Execute a shell command asynchronously in root.
  * 
  * @param cmd The command to execute.
  * @returns The standard output of the command.
