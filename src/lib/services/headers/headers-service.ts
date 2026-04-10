@@ -43,20 +43,20 @@ export class HeadersService {
     headers.host = `${upstream.host}:${upstream.port}`;
 
     if (this.forwardIp) {
-      const existing = headers["x-forwarded-for"];
-      const clientIp = req.socket.remoteAddress ?? "unknown";
-      headers["x-forwarded-for"] = existing
+      const existing = headers['x-forwarded-for'];
+      const clientIp = req.socket.remoteAddress ?? 'unknown';
+      headers['x-forwarded-for'] = existing
         ? `${existing}, ${clientIp}`
         : clientIp;
-      headers["x-forwarded-proto"] ??= (req.socket as { encrypted?: boolean })
+      headers['x-forwarded-proto'] ??= (req.socket as { encrypted?: boolean })
         .encrypted
-        ? "https"
-        : "http";
+        ? 'https'
+        : 'http';
       headers['x-forwarded-host'] ??= req.headers.host ?? '';
     }
 
-    this.applyRules(headers, this.globalRules, "request");
-    this.applyRules(headers, routeRules, "request");
+    this.applyRules(headers, this.globalRules, 'request');
+    this.applyRules(headers, routeRules, 'request');
 
     return headers;
   }
@@ -115,11 +115,11 @@ export class HeadersService {
   private applyRules(
     headers: IncomingHttpHeaders,
     rules: HeaderRules | undefined,
-    direction: "request" | "response",
+    direction: 'request' | 'response',
   ): void {
     if (!rules) return;
 
-    const removeKey = direction === "request" ? "removeRequest" : "removeResponse";
+    const removeKey = direction === 'request' ? 'removeRequest' : 'removeResponse';
     const addKey = direction;
 
     for (const key of rules[removeKey] ?? []) {

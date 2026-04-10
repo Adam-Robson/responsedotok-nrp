@@ -76,8 +76,8 @@ export function esmify(dir) {
 	// first pass
 	const renames = new Map();
 	walk(dir, (file) => {
-		if (file.endsWith(".js")) {
-			const esmFile = file.replace(/\.js$/, ".mjs");
+		if (file.endsWith('.js')) {
+			const esmFile = file.replace(/\.js$/, '.mjs');
 			renames.set(file, esmFile);
 		}
 	});
@@ -88,19 +88,19 @@ export function esmify(dir) {
 
 	// second pass
 	walk(dir, (file) => {
-		if (!file.endsWith(".mjs") && !file.endsWith(".d.ts")) return;
-		let src = fs.readFileSync(file, "utf-8");
+		if (!file.endsWith('.mjs') && !file.endsWith('.d.ts')) return;
+		let src = fs.readFileSync(file, 'utf-8');
 		src = src.replace(
 			/(from\s+["'])(\.{1,2}\/[^"']+?)\.js(["'])/g,
 			"$1$2.mjs$3",
 		);
 		src = src.replace(
 			/(export\s+.*?from\s+["'])(\.{1,2}\/[^"']+?)\.js(["'])/g,
-			"$1$2.mjs$3",
+			'$1$2.mjs$3',
 		);
 		src = src.replace(
 			/\/\/# sourceMappingURL=(.+?)\.js\.map/,
-			"//# sourceMappingURL=$1.mjs.map",
+			'//# sourceMappingURL=$1.mjs.map',
 		);
 		fs.writeFileSync(file, src);
 	});
@@ -157,11 +157,11 @@ export function build(dir) {
 
     console.info('▶▶▶ Build complete!');
     const report = [
-      "dist/index.mjs",
-      "dist/index.d.ts",
-      "dist/cli/index.mjs",
-      "dist/cjs/index.js",
-      "dist/cjs/cli/index.js",
+      'dist/index.mjs',
+      'dist/index.d.ts',
+      'dist/cli/index.mjs',
+      'dist/cjs/index.js',
+      'dist/cjs/cli/index.js',
     ];
     for (const f of report) {
       const full = path.join(dir, f);

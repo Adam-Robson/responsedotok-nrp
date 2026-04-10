@@ -1,4 +1,4 @@
-import { ConfigType } from "../src/lib/types/config.js";
+import { ConfigType } from '../src/lib/types/config.js';
 
 export interface EnvOverrides {
   host?: string;

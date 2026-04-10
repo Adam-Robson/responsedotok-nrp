@@ -14,14 +14,14 @@ import { LoadBalancerStrategy } from "../lib/types/load-balancer-strategy.js";
  * @returns An object containing the parsed arguments
  */
 export function parseArgs(argv: string[]): {
-	config: string;
+	configPath: string;
 	logLevel: LogLevel;
 	help: boolean;
   env: Record<string, string>;
   balancer?: LoadBalancerStrategy;
 } {
 	const args = argv.slice(2);
-	let config = "./proxy.config.json";
+	let configPath = "./proxy.config.json";
 	let logLevel: LogLevel = "info";
 	let help = false;
   let env: Record<string, string> = {};
@@ -37,7 +37,7 @@ export function parseArgs(argv: string[]): {
       case "--config":
       case "-c":
         if (i + 1 >= args.length) throw new Error(`Missing value for ${arg}`);
-        config = args[++i] as string;
+        configPath = args[++i] as string;
         break;
       case "--log-level":
       case "-l":
@@ -68,5 +68,5 @@ export function parseArgs(argv: string[]): {
         throw new Error(`Unknown argument: ${arg}`);
     }
   }
-	return { config, logLevel, help, env, balancer };
+	return { configPath, logLevel, help, env, balancer };
 }

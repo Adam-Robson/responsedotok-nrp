@@ -144,7 +144,7 @@ export class HttpHandler {
           route.headers
         );
 
-        proxyRes.on("error", (err) => {
+        proxyRes.on('error', (err) => {
           this.handleError(err, ctx, res);
           resolve();
         });
@@ -153,12 +153,12 @@ export class HttpHandler {
           Promise.resolve(this.hooks.onResponse(ctx, res.statusCode)).then(
             () => {
               proxyRes.pipe(res, { end: true });
-              proxyRes.on("end", resolve);
+              proxyRes.on('end', resolve);
             },
           );
         } else {
           proxyRes.pipe(res, { end: true });
-          proxyRes.on("end", resolve);
+          proxyRes.on('end', resolve);
         }
       });
         
@@ -173,9 +173,9 @@ export class HttpHandler {
         });
         let bodyTooLarge = false;
 
-			proxyReq.on("error", (err) => {
+			proxyReq.on('error', (err) => {
 				if (bodyTooLarge) {
-					if (!res.headersSent) this.sendError(res, 413, "Payload Too Large");
+					if (!res.headersSent) this.sendError(res, 413, 'Payload Too Large');
 					  resolve();
 					  return;
 				  }
@@ -197,7 +197,7 @@ export class HttpHandler {
 				  resolve();
 			});
 
-			req.on("error", (err) => {
+			req.on('error', (err) => {
 				this.handleError(err, ctx, res);
 				resolve();
 			});
@@ -205,7 +205,7 @@ export class HttpHandler {
 			const maxBodySize = route.maxBodySize ?? this.config.maxBodySize;
 			if (maxBodySize !== undefined) {
 				let bodyBytes = 0;
-				req.on("data", (chunk: Buffer) => {
+				req.on('data', (chunk: Buffer) => {
 					bodyBytes += chunk.length;
 					if (!bodyTooLarge && bodyBytes > maxBodySize) {
 						bodyTooLarge = true;
@@ -258,7 +258,7 @@ export class HttpHandler {
 	): void {
 		this.hooks.onError?.(err, ctx);
 		if (!res.headersSent) {
-			this.sendError(res, 502, "Bad Gateway");
+			this.sendError(res, 502, 'Bad Gateway');
 		}
 	}
 
@@ -268,7 +268,7 @@ export class HttpHandler {
 		message: string,
 	): void {
 		if (res.headersSent) return;
-		res.writeHead(status, { "content-type": "text/plain" });
+		res.writeHead(status, { 'content-type': 'text/plain' });
 		res.end(`${status} ${message}`);
 	}
 }

@@ -34,13 +34,13 @@ export class WebSocketHandler {
     const route = matchRoute(config.routes, url.pathname);
 
     if (!route) {
-      socket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+      socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
       socket.destroy();
       return;
     }
 
     if (route.upstreams.length === 0) {
-      socket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+      socket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
       socket.destroy();
       return;
     }
@@ -56,13 +56,13 @@ export class WebSocketHandler {
       upstream
       );
 
-    const requestLine = `${req.method ?? "GET"} ${targetPath} HTTP/1.1\r\n`;
+    const requestLine = `${req.method ?? 'GET'} ${targetPath} HTTP/1.1\r\n`;
     const headerBlock = `${Object.entries(upgradeHeaders)
       .filter(([_, v]) => v !== undefined)
-      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
-      .join("\r\n")}\r\n\r\n`;
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+      .join('\r\n')}\r\n\r\n`;
 
-    const useTls = upstream.protocol === "https";
+    const useTls = upstream.protocol === 'https';
     const connectOptions = { host: upstream.host, port: upstream.port };
     const onConnect = () => {
       upstreamSocket.write(requestLine + headerBlock);
@@ -81,15 +81,15 @@ export class WebSocketHandler {
       upstreamSocket.destroy();
     };
 
-    upstreamSocket.on("error", (err) => {
+    upstreamSocket.on('error', (err) => {
       this.httpHandler.notifyError(err, { req });
       cleanup();
     });
 
     upstreamSocket.setTimeout(route.timeout ?? config.timeout ?? 30000, cleanup);
 
-    socket.on("error", cleanup);
-    socket.on("close", cleanup);
-    upstreamSocket.on("close", cleanup);
+    socket.on('error', cleanup);
+    socket.on('close', cleanup);
+    upstreamSocket.on('close', cleanup);
   }
 }

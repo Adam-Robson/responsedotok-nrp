@@ -78,7 +78,7 @@ export class Config {
         );
       }
       for (const [_, u] of rte.upstreams.entries()) {
-        if (!u.host || typeof u.port !== "number") {
+        if (!u.host || typeof u.port !== 'number') {
           throw new Error(
             `Config in ${source} is required to have Number for port and String for host.`
           );
