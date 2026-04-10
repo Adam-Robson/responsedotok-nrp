@@ -1,5 +1,5 @@
-import type { LogLevel } from "../lib/types/log.js";
-import { LoadBalancerStrategy } from "../lib/types/load-balancer-strategy.js";
+import { LoadBalancerStrategy } from '../lib/types/load-balancer-strategy.js';
+import type { LogLevel } from '../lib/types/log.js';
 
 /**
  * Parse command line arguments to execute the program.
@@ -14,51 +14,53 @@ import { LoadBalancerStrategy } from "../lib/types/load-balancer-strategy.js";
  * @returns An object containing the parsed arguments
  */
 export function parseArgs(argv: string[]): {
-	configPath: string;
-	logLevel: LogLevel;
-	help: boolean;
+  configPath: string;
+  logLevel: LogLevel;
+  help: boolean;
   env: Record<string, string>;
   balancer?: LoadBalancerStrategy;
 } {
-	const args = argv.slice(2);
-	let configPath = "./proxy.config.json";
-	let logLevel: LogLevel = "info";
-	let help = false;
-  let env: Record<string, string> = {};
+  const args = argv.slice(2);
+  let configPath = './proxy.config.json';
+  let logLevel: LogLevel = 'info';
+  let help = false;
+  const env: Record<string, string> = {};
   let balancer: LoadBalancerStrategy | undefined;
 
-	for (let i = 0; i < args.length; i++) {
-		const arg = args[i];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
     switch (arg) {
-      case "--help":
-      case "-h":
+      case '--help':
+      case '-h':
         help = true;
         break;
-      case "--config":
-      case "-c":
+      case '--config':
+      case '-c':
         if (i + 1 >= args.length) throw new Error(`Missing value for ${arg}`);
         configPath = args[++i] as string;
         break;
-      case "--log-level":
-      case "-l":
+      case '--log-level':
+      case '-l':
         if (i + 1 >= args.length) throw new Error(`Missing value for ${arg}`);
         logLevel = args[++i] as LogLevel;
         break;
-      case "--env":
-      case "-e":
+      case '--env':
+      case '-e': {
         if (i + 1 >= args.length) throw new Error(`Missing value for ${arg}`);
-        const [key, value] = args[++i].split("=");
-        if (!key || !value) throw new Error(`Invalid value for ${arg}: ${args[i]}`);
+        const [key, value] = args[++i].split('=');
+        if (!key || !value)
+          throw new Error(`Invalid value for ${arg}: ${args[i]}`);
         env[key] = value;
         break;
-      case "--balancer":
-      case "-b": {
+      }
+      case '--balancer':
+      case '-b': {
         if (i + 1 >= args.length) throw new Error(`Missing value for ${arg}`);
         const value = args[++i] as string;
         const valid = Object.values(LoadBalancerStrategy) as string[];
         if (!valid.includes(value)) {
           throw new Error(
-            `Invalid value for ${arg}: ${value}. Must be one of: ${valid.join(", ")}`
+            `Invalid value for ${arg}: ${value}. Must be one of: ${valid.join(', ')}`,
           );
         }
         balancer = value as LoadBalancerStrategy;
@@ -68,5 +70,5 @@ export function parseArgs(argv: string[]): {
         throw new Error(`Unknown argument: ${arg}`);
     }
   }
-	return { configPath, logLevel, help, env, balancer };
+  return { configPath, logLevel, help, env, balancer };
 }

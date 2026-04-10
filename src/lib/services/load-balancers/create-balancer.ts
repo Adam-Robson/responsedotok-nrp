@@ -1,7 +1,7 @@
 import { LoadBalancerStrategy } from '../../types/load-balancer-strategy.js';
 import type { LoadBalancer } from './load-balancer.js';
-import { RoundRobinBalancer } from './round-robin-balancer.js';
 import { RandomBalancer } from './random-balancer.js';
+import { RoundRobinBalancer } from './round-robin-balancer.js';
 import { WeightedBalancer } from './weighted-balancer.js';
 
 /**

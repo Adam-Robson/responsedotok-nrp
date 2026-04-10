@@ -1,11 +1,11 @@
 import http from 'node:http';
 import type { Socket } from 'node:net';
-import { HttpHandler } from '../handlers/http-handler.js';
-import { WebSocketHandler } from '../handlers/websocket-handler.js';
-import { HeadersService } from '../headers/headers-service.js';
 import { Logger } from '../../../logger/logger.js';
 import type { ConfigType } from '../../types/config.js';
 import type { Hooks } from '../../types/hooks.js';
+import { HttpHandler } from '../handlers/http-handler.js';
+import { WebSocketHandler } from '../handlers/websocket-handler.js';
+import { HeadersService } from '../headers/headers-service.js';
 
 /**
  * Top-level reverse-proxy server.
@@ -29,11 +29,7 @@ export class ProxyServer {
   private readonly wsHandler: WebSocketHandler;
   private readonly logger: Logger;
 
-  constructor(
-    config: ConfigType,
-    hooks: Hooks = {},
-    logger?: Logger,
-  ) {
+  constructor(config: ConfigType, hooks: Hooks = {}, logger?: Logger) {
     this.logger = logger ?? new Logger('info');
     this.httpHandler = new HttpHandler(config, hooks);
 
@@ -49,7 +45,7 @@ export class ProxyServer {
         hooks.onError?.(error, { req, res });
         this.logger.error('Unhandled request error', {
           url: req.url,
-          message: error.message
+          message: error.message,
         });
         if (!res.headersSent) {
           res.writeHead(502, { 'content-type': 'text/plain' });
@@ -64,7 +60,7 @@ export class ProxyServer {
         hooks.onError?.(error, { req });
         this.logger.error('Unhandled WebSocket upgrade error', {
           url: req.url,
-          message: error.message
+          message: error.message,
         });
         socket.destroy();
       });

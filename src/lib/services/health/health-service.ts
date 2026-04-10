@@ -5,19 +5,18 @@ import type { Upstream } from '../../types/upstream.js';
  * Check the health of upstream servers periodically via TCP and
  * track health status. Upstreams all begin as healthy, and
  * are only marked as unhealthy after failing a health check.
- * 
- * @property [unhealthy] 
+ *
+ * @property [unhealthy]
  */
-
 
 export class HealthService {
   private readonly unhealthy: Set<string> = new Set();
-  private readonly timers: ReturnType<typeof setInterval>[] = []
+  private readonly timers: ReturnType<typeof setInterval>[] = [];
 
   constructor(
     private readonly upstreams: Upstream[],
     private readonly interval: number = 30000,
-    private readonly timeout: number = 5000
+    private readonly timeout: number = 5000,
   ) {}
 
   start(): void {
@@ -45,11 +44,10 @@ export class HealthService {
   }
 
   private probe(u: Upstream): void {
-    
     const key = this.key(u);
     const socket = net.createConnection({
       host: u.host,
-      port: u.port
+      port: u.port,
     });
 
     socket.setTimeout(this.timeout);
@@ -57,7 +55,7 @@ export class HealthService {
       this.unhealthy.delete(key);
       socket.destroy();
     });
-    
+
     socket.on('error', () => {
       this.unhealthy.add(key);
     });

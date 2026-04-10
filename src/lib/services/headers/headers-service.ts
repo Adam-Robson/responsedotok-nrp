@@ -1,7 +1,7 @@
 import type {
   IncomingHttpHeaders,
   IncomingMessage,
-  ServerResponse
+  ServerResponse,
 } from 'node:http';
 import { HOP_BY_HOP_HEADERS } from '../../constants/hop-by-hop-headers.js';
 import type { HeaderRules } from '../../types/header-rules.js';
@@ -17,7 +17,7 @@ import type { HeaderRules } from '../../types/header-rules.js';
  */
 
 export class HeadersService {
-   constructor(
+  constructor(
     private readonly globalRules: HeaderRules | undefined,
     private readonly forwardIp: boolean,
   ) {}
@@ -69,7 +69,7 @@ export class HeadersService {
 
   applyResponseHeaders(
     res: ServerResponse,
-    routeRules: HeaderRules | undefined
+    routeRules: HeaderRules | undefined,
   ): void {
     for (const key of [
       ...(this.globalRules?.removeResponse ?? []),
@@ -90,9 +90,7 @@ export class HeadersService {
    * Strip hop-by-hop headers from the given headers.
    * @param headers The headers to strip hop-by-hop headers from.
    */
-  private stripHopByHop(
-    headers: IncomingHttpHeaders
-  ): void {
+  private stripHopByHop(headers: IncomingHttpHeaders): void {
     const cxn = headers.connection;
     if (typeof cxn === 'string') {
       for (const name of cxn.split(',')) {
@@ -103,7 +101,7 @@ export class HeadersService {
       delete headers[name];
     }
   }
-  
+
   /**
    * Apply header rules based on the direction (request or response).
    * @param headers The headers to apply the rules to.
@@ -119,7 +117,8 @@ export class HeadersService {
   ): void {
     if (!rules) return;
 
-    const removeKey = direction === 'request' ? 'removeRequest' : 'removeResponse';
+    const removeKey =
+      direction === 'request' ? 'removeRequest' : 'removeResponse';
     const addKey = direction;
 
     for (const key of rules[removeKey] ?? []) {
@@ -129,4 +128,4 @@ export class HeadersService {
       headers[key.toLowerCase()] = value;
     }
   }
-};
+}

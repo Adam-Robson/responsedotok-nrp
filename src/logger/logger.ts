@@ -1,4 +1,4 @@
-import { LEVELS, type LogLevel, type Log } from '../lib/types/log.js';
+import { LEVELS, type Log, type LogLevel } from '../lib/types/log.js';
 
 /**
  * Emit logs in JSOn format to stdout and stderr at levels debug, info, warn and error.
@@ -43,9 +43,9 @@ export class Logger {
       date: new Date(),
       level: l,
       message: m,
-      body: extra ?? {}
+      body: extra ?? {},
     } satisfies Log);
-    
+
     if (l === 'error' || l === 'warn') {
       process.stderr.write(`${line}\n`);
     } else {

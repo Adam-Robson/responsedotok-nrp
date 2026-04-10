@@ -3,7 +3,7 @@
  */
 
 export enum LoadBalancerStrategy {
-	RoundRobin = 'round-robin',
-	Random = 'random',
-	Weighted = 'weighted',
+  RoundRobin = 'round-robin',
+  Random = 'random',
+  Weighted = 'weighted',
 }

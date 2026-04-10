@@ -1,6 +1,6 @@
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent'
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'silent';
 
-export interface Log { 
+export interface Log {
   date?: Date;
   level: LogLevel;
   message: string;
@@ -12,5 +12,5 @@ export const LEVELS: Record<LogLevel, number> = {
   info: 1,
   warn: 2,
   error: 3,
-  silent: 4
-}
+  silent: 4,
+};

@@ -2,16 +2,15 @@ import type { IncomingMessage } from 'node:http';
 import net from 'node:net';
 
 import tls from 'node:tls';
-import { HeadersService } from '../headers/headers-service.js';
-import { HttpHandler } from './http-handler.js';
 import { matchRoute } from '../../../utils/match-route.js';
 import { rewritePath } from '../../../utils/rewrite-path.js';
+import type { HeadersService } from '../headers/headers-service.js';
+import type { HttpHandler } from './http-handler.js';
 
 export class WebSocketHandler {
-
   constructor(
     private readonly httpHandler: HttpHandler,
-    private readonly headersService: HeadersService
+    private readonly headersService: HeadersService,
   ) {}
 
   /**
@@ -25,11 +24,11 @@ export class WebSocketHandler {
    */
 
   async upgrade(
-    req: IncomingMessage, 
+    req: IncomingMessage,
     socket: net.Socket,
-    head: Buffer
+    head: Buffer,
   ): Promise<void> {
-    const {config} = this.httpHandler;
+    const { config } = this.httpHandler;
     const url = new URL(req.url ?? '/', 'http://localhost');
     const route = matchRoute(config.routes, url.pathname);
 
@@ -44,7 +43,7 @@ export class WebSocketHandler {
       socket.destroy();
       return;
     }
-  
+
     const candidates = this.httpHandler.healthyCandidates(route.upstreams);
     const upstream = this.httpHandler.getBalancer(route).pick(candidates);
 
@@ -53,8 +52,8 @@ export class WebSocketHandler {
     const upgradeHeaders = this.headersService.buildRequestHeaders(
       req,
       route.headers,
-      upstream
-      );
+      upstream,
+    );
 
     const requestLine = `${req.method ?? 'GET'} ${targetPath} HTTP/1.1\r\n`;
     const headerBlock = `${Object.entries(upgradeHeaders)
@@ -86,7 +85,10 @@ export class WebSocketHandler {
       cleanup();
     });
 
-    upstreamSocket.setTimeout(route.timeout ?? config.timeout ?? 30000, cleanup);
+    upstreamSocket.setTimeout(
+      route.timeout ?? config.timeout ?? 30000,
+      cleanup,
+    );
 
     socket.on('error', cleanup);
     socket.on('close', cleanup);

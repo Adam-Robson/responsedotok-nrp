@@ -1,5 +1,5 @@
 export function printHelp(): void {
-	console.info(`
+  console.info(`
     nrp — Node Reverse Proxy
 
     **USAGE**

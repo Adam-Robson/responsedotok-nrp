@@ -4,7 +4,7 @@ import type { ConfigType } from '../lib/types/config.js';
 
 /**
  * Configure global settings.
- * 
+ *
  * @property {number} port - The port number the server will listen on.
  * @property {string} [host] - The host address the server will bind to (default: '
  * @property {Route[]} routes - An array of route configurations.
@@ -14,7 +14,7 @@ import type { ConfigType } from '../lib/types/config.js';
  * @property {boolean} [forwardIp] - Whether to forward the client's IP address.
  * @property {number} [maxBodySize] - Maximum allowed size for request bodies in bytes.
  * @property {healthCheck} {{ interval?: number; timeout?: number }} [healthCheck] - Optional health check configuration.
- * 
+ *
  */
 
 export class Config {
@@ -27,7 +27,7 @@ export class Config {
   readonly forwardIp?: ConfigType['forwardIp'];
   readonly maxBodySize?: ConfigType['maxBodySize'];
   readonly healthCheck?: ConfigType['healthCheck'];
-  
+
   private constructor(cfg: ConfigType) {
     this.port = cfg.port;
     this.host = cfg.host ?? '0.0.0.0';
@@ -42,50 +42,48 @@ export class Config {
 
   static validate(raw: unknown, source: string): ConfigType {
     if (!raw || typeof raw !== 'object') {
-      throw new Error(
-        `Config in source ${source} must be an object`
-      );
+      throw new Error(`Config in source ${source} must be an object`);
     }
 
     const conf = raw as Partial<ConfigType>;
 
     if (typeof conf.port !== 'number') {
       throw new Error(
-        `Config in ${source} must have a numeric 'port' property`
+        `Config in ${source} must have a numeric 'port' property`,
       );
     }
     if (conf.port < 1 || conf.port > 65535 || !Number.isInteger(conf.port)) {
       throw new Error(
-        `Config in ${source} PORT must be an integer between 1 and 65535.`
+        `Config in ${source} PORT must be an integer between 1 and 65535.`,
       );
     }
 
     if (!Array.isArray(conf.routes) || conf.routes.length === 0) {
       throw new Error(
-        `Config in ${source} must have a non-empty 'routes' array`
+        `Config in ${source} must have a non-empty 'routes' array`,
       );
     }
 
     for (const [i, rte] of conf.routes.entries()) {
       if (!rte.match && rte.match !== '') {
         throw new Error(
-          `Config in ${source} is required to have routes.match at index ${i}`
+          `Config in ${source} is required to have routes.match at index ${i}`,
         );
       }
-       if (!Array.isArray(rte.upstreams) || rte.upstreams.length === 0) {
+      if (!Array.isArray(rte.upstreams) || rte.upstreams.length === 0) {
         throw new Error(
-          `Config in ${source} is required to have routes.upstreams at index ${i}`
+          `Config in ${source} is required to have routes.upstreams at index ${i}`,
         );
       }
       for (const [_, u] of rte.upstreams.entries()) {
         if (!u.host || typeof u.port !== 'number') {
           throw new Error(
-            `Config in ${source} is required to have Number for port and String for host.`
+            `Config in ${source} is required to have Number for port and String for host.`,
           );
         }
         if (u.port < 1 || u.port > 65535 || !Number.isInteger(u.port)) {
           throw new Error(
-            `Config in ${source} upstream port must be an integer between 1 and 65535.`
+            `Config in ${source} upstream port must be an integer between 1 and 65535.`,
           );
         }
       }
@@ -109,9 +107,7 @@ export class Config {
       const module = (await import(absolutePath)) as { default?: ConfigType };
       raw = module.default ?? module;
     } else {
-      throw new Error(
-        `Unsupported config file extension: ${extension}`
-      );
+      throw new Error(`Unsupported config file extension: ${extension}`);
     }
 
     const validated = Config.validate(raw, filePath);

@@ -4,24 +4,24 @@ import type { LoadBalancerStrategy } from './load-balancer-strategy.js';
 
 /**
  * Global configuration types.
- * 
+ *
  * @property {number} port - Port to listen on - default 8888.
  * @property {string} [host] - Host to listen on - default '0.0.0.0'.
  * @property {Route[]} routes - Array of route configurations.
  * @property {HeaderRules} [headers] - Global header rules applied to every request/response.
  * @property {LoadBalancerStrategy} [balancer] - Load balancer strategy - default 'round-robin'.
  * @property {number} [timeout] - Proxy request timeout - default 30000ms (30sec).
- * @property {string[]} [fowardIp] - IP addresses to forward in the X-Forwarded-For header - default true. 
+ * @property {string[]} [fowardIp] - IP addresses to forward in the X-Forwarded-For header - default true.
  */
 
 export interface ConfigType {
-    port: number;
-    host?: string;
-    routes: Route[];
-    headers?: HeaderRules;
-    balancer?: LoadBalancerStrategy;
-    timeout?: number;
-    forwardIp?: boolean;
-    maxBodySize?: number;
-    healthCheck?: { interval?: number; timeout?: number };
+  port: number;
+  host?: string;
+  routes: Route[];
+  headers?: HeaderRules;
+  balancer?: LoadBalancerStrategy;
+  timeout?: number;
+  forwardIp?: boolean;
+  maxBodySize?: number;
+  healthCheck?: { interval?: number; timeout?: number };
 }
