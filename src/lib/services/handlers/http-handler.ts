@@ -15,7 +15,10 @@ import { createBalancer } from '../load-balancers/create-balancer.js';
 import type { LoadBalancer } from '../load-balancers/load-balancer.js';
 
 export class HttpHandler {
-  private readonly balancers = new Map<string, LoadBalancer>();
+  // Keyed by route object identity so that two routes sharing the same
+  // strategy string receive independent balancer instances (and independent
+  // state for stateful strategies such as RoundRobin).
+  private readonly balancers = new Map<object, LoadBalancer>();
   private readonly globalBalancer: LoadBalancer;
   private readonly httpAgent = new http.Agent({ keepAlive: true });
   private readonly httpsAgent = new https.Agent({ keepAlive: true });
@@ -232,16 +235,16 @@ export class HttpHandler {
   }): LoadBalancer {
     if (!route.balancer) return this.globalBalancer;
 
-    const key = route.balancer;
-    if (!this.balancers.has(key)) {
+    // Cache by route object reference so that two routes that share the same
+    // strategy string each maintain their own independent balancer state.
+    if (!this.balancers.has(route)) {
       this.balancers.set(
-        key,
+        route,
         createBalancer(route.balancer as LoadBalancerStrategy),
       );
     }
-    const balancer = this.balancers.get(key);
-    if (!balancer) return this.globalBalancer;
-    return balancer;
+    // biome-ignore lint/style/noNonNullAssertion: key was just set above
+    return this.balancers.get(route)!;
   }
 
   /**

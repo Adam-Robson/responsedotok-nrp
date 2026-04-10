@@ -277,6 +277,49 @@ describe('HttpHandler', () => {
       const b2 = handler.getBalancer(route);
       expect(b1).toBe(b2);
     });
+
+    it('gives independent balancers to two routes sharing the same strategy', () => {
+      const handler = new HttpHandler(makeConfig());
+      // Two distinct route objects that both request round-robin.
+      const routeA = {
+        upstreams: [{ host: '127.0.0.1', port: 3000 }],
+        balancer: LoadBalancerStrategy.RoundRobin,
+      };
+      const routeB = {
+        upstreams: [{ host: '127.0.0.2', port: 3000 }],
+        balancer: LoadBalancerStrategy.RoundRobin,
+      };
+      const balancerA = handler.getBalancer(routeA);
+      const balancerB = handler.getBalancer(routeB);
+      // Each route must receive its own balancer instance.
+      expect(balancerA).not.toBe(balancerB);
+    });
+
+    it('RoundRobin state is independent per route', () => {
+      const handler = new HttpHandler(makeConfig());
+      const upstreamsA: Upstream[] = [
+        { host: '10.0.0.1', port: 3000 },
+        { host: '10.0.0.2', port: 3000 },
+      ];
+      const upstreamsB: Upstream[] = [
+        { host: '10.0.1.1', port: 4000 },
+        { host: '10.0.1.2', port: 4000 },
+      ];
+      const routeA = {
+        upstreams: upstreamsA,
+        balancer: LoadBalancerStrategy.RoundRobin,
+      };
+      const routeB = {
+        upstreams: upstreamsB,
+        balancer: LoadBalancerStrategy.RoundRobin,
+      };
+      // Advance route A's balancer twice so its counter is at 2.
+      handler.getBalancer(routeA).pick(upstreamsA); // idx → 1
+      handler.getBalancer(routeA).pick(upstreamsA); // idx → 2
+
+      // Route B's balancer should still start at 0, independent of route A.
+      expect(handler.getBalancer(routeB).pick(upstreamsB)).toBe(upstreamsB[0]);
+    });
   });
 
   it('retries on the next upstream when the first fails', async () => {
