@@ -1,6 +1,14 @@
 import http from 'node:http';
 import net from 'node:net';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { HttpHandler } from '../src/lib/services/handlers/http-handler.js';
 import { WebSocketHandler } from '../src/lib/services/handlers/websocket-handler.js';
 import { HeadersService } from '../src/lib/services/headers/headers-service.js';
@@ -12,7 +20,7 @@ import type { ConfigType } from '../src/lib/types/config.js';
  * proxy and upstream. The focus is on verifying that WebSocket upgrade requests
  * are correctly handled, routed to the upstream, and that errors are handled
  * gracefully.
- * 
+ *
  * @params overrides - Partial config overrides to customize the proxy
  * configuration for each test case.
  */
@@ -41,15 +49,18 @@ function upgrade(
   path: string,
 ): Promise<{ socket: net.Socket; head: string }> {
   return new Promise((resolve, reject) => {
-    const socket = net.createConnection({ host: '127.0.0.1', port: proxyPort }, () => {
-      socket.write(
-        `GET ${path} HTTP/1.1\r\n` +
-        `Host: 127.0.0.1:${proxyPort}\r\n` +
-        `Upgrade: websocket\r\n` +
-        `Connection: Upgrade\r\n` +
-        `\r\n`,
-      );
-    });
+    const socket = net.createConnection(
+      { host: '127.0.0.1', port: proxyPort },
+      () => {
+        socket.write(
+          `GET ${path} HTTP/1.1\r\n` +
+            `Host: 127.0.0.1:${proxyPort}\r\n` +
+            `Upgrade: websocket\r\n` +
+            `Connection: Upgrade\r\n` +
+            `\r\n`,
+        );
+      },
+    );
     let data = '';
     socket.on('data', (chunk) => {
       data += chunk.toString();
@@ -70,7 +81,9 @@ beforeAll(async () => {
   // simulating an upstream that accepts WebSocket connections.
   wsUpstream = net.createServer((socket) => {
     socket.once('data', () => {
-      socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n');
+      socket.write(
+        'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n',
+      );
       socket.pipe(socket);
     });
   });
@@ -170,11 +183,14 @@ describe('WebSocketHandler', () => {
     await new Promise<void>((r) => proxyServer.listen(0, '127.0.0.1', r));
     const proxyPort = (proxyServer.address() as net.AddressInfo).port;
 
-    const socket = net.createConnection({ host: '127.0.0.1', port: proxyPort }, () => {
-      socket.write(
-        `GET /ws/chat HTTP/1.1\r\nHost: 127.0.0.1:${proxyPort}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n`,
-      );
-    });
+    const socket = net.createConnection(
+      { host: '127.0.0.1', port: proxyPort },
+      () => {
+        socket.write(
+          `GET /ws/chat HTTP/1.1\r\nHost: 127.0.0.1:${proxyPort}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n`,
+        );
+      },
+    );
 
     // Wait for the error to propagate
     await new Promise((r) => setTimeout(r, 500));
@@ -210,7 +226,7 @@ describe('WebSocketHandler', () => {
     expect(head).toContain('101');
 
     socket.destroy();
-    
+
     await new Promise<void>((r) => proxyServer.close(() => r()));
   });
 });

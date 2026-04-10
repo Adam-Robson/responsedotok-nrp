@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { RoundRobinBalancer } from '../src/lib/services/load-balancers/round-robin-balancer.js';
-import { RandomBalancer } from '../src/lib/services/load-balancers/random-balancer.js';
-import { WeightedBalancer } from '../src/lib/services/load-balancers/weighted-balancer.js';
 import { createBalancer } from '../src/lib/services/load-balancers/create-balancer.js';
+import { RandomBalancer } from '../src/lib/services/load-balancers/random-balancer.js';
+import { RoundRobinBalancer } from '../src/lib/services/load-balancers/round-robin-balancer.js';
+import { WeightedBalancer } from '../src/lib/services/load-balancers/weighted-balancer.js';
 import { LoadBalancerStrategy } from '../src/lib/types/load-balancer-strategy.js';
 import type { Upstream } from '../src/lib/types/upstream.js';
 

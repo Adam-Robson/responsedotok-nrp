@@ -1,9 +1,17 @@
 import http from 'node:http';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { HttpHandler } from '../src/lib/services/handlers/http-handler.js';
-import { LoadBalancerStrategy } from '../src/lib/types/load-balancer-strategy.js';
 import type { ConfigType } from '../src/lib/types/config.js';
 import type { Hooks } from '../src/lib/types/hooks.js';
+import { LoadBalancerStrategy } from '../src/lib/types/load-balancer-strategy.js';
 import type { Upstream } from '../src/lib/types/upstream.js';
 
 let upstreamServer: http.Server;
@@ -11,7 +19,7 @@ let upstreamPort: number;
 
 /**
  * Create config object for test; allow overrides.
- * @param overrides 
+ * @param overrides
  * @returns Config object with defaults for testing, overridden when necessary.
  */
 function makeConfig(overrides: Partial<ConfigType> = {}): ConfigType {
@@ -38,28 +46,45 @@ function makeConfig(overrides: Partial<ConfigType> = {}): ConfigType {
 function request(
   handler: HttpHandler,
   path: string,
-  options: { method?: string; headers?: Record<string, string>; body?: string } = {},
-): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
+  options: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  } = {},
+): Promise<{
+  status: number;
+  body: string;
+  headers: http.IncomingHttpHeaders;
+}> {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => handler.handler(req, res));
     server.listen(0, '127.0.0.1', () => {
       const port = (server.address() as import('net').AddressInfo).port;
       const req = http.request(
-        { hostname: '127.0.0.1', port, path, method: options.method ?? 'GET', headers: options.headers },
+        {
+          hostname: '127.0.0.1',
+          port,
+          path,
+          method: options.method ?? 'GET',
+          headers: options.headers,
+        },
         (res) => {
           const chunks: Buffer[] = [];
           res.on('data', (c) => chunks.push(c));
           res.on('end', () => {
             server.close();
             resolve({
-              status: res.statusCode!,
+              status: res.statusCode ?? 0,
               body: Buffer.concat(chunks).toString(),
               headers: res.headers,
             });
           });
         },
       );
-      req.on('error', (err) => { server.close(); reject(err); });
+      req.on('error', (err) => {
+        server.close();
+        reject(err);
+      });
       if (options.body) req.write(options.body);
       req.end();
     });
@@ -68,8 +93,8 @@ function request(
 
 /**
  * Test infrastructure
- * Upstream started before all tests; 
- * closed after all tests; 
+ * Upstream started before all tests;
+ * closed after all tests;
  * restore mocks after each test.
  */
 beforeAll(async () => {
@@ -120,7 +145,7 @@ describe('HttpHandler', () => {
         {
           match: '/api',
           upstreams: [{ host: '127.0.0.1', port: upstreamPort }],
-          maxBodySize: 5
+          maxBodySize: 5,
         },
       ],
     });
@@ -128,7 +153,7 @@ describe('HttpHandler', () => {
     const res = await request(handler, '/api/data', {
       method: 'POST',
       headers: { 'content-length': '9999' },
-      body: 'x'.repeat(100)
+      body: 'x'.repeat(100),
     });
     expect(res.status).toBe(413);
   });
@@ -176,7 +201,7 @@ describe('HttpHandler', () => {
       routes: [
         {
           match: '/api',
-          upstreams: [{ host: '127.0.0.1', port: 1 }]
+          upstreams: [{ host: '127.0.0.1', port: 1 }],
         },
       ],
     });
@@ -192,7 +217,7 @@ describe('HttpHandler', () => {
         {
           match: '/v1',
           upstreams: [{ host: '127.0.0.1', port: upstreamPort }],
-          rewrite: { stripPrefix: '/v1', addPrefix: '/api' }
+          rewrite: { stripPrefix: '/v1', addPrefix: '/api' },
         },
       ],
     });
@@ -220,11 +245,13 @@ describe('HttpHandler', () => {
     it('falls back to all upstreams when none are healthy', () => {
       const upstreams: Upstream[] = [
         { host: '127.0.0.1', port: 1 },
-        { host: '127.0.0.1', port: 2 }
+        { host: '127.0.0.1', port: 2 },
       ];
-      const handler = new HttpHandler(makeConfig({
-        routes: [{ match: '/api', upstreams }]
-      }));
+      const handler = new HttpHandler(
+        makeConfig({
+          routes: [{ match: '/api', upstreams }],
+        }),
+      );
       // Without starting health service, all are treated as healthy
       const result = handler.healthyCandidates(upstreams);
       expect(result).toEqual(upstreams);
@@ -244,7 +271,7 @@ describe('HttpHandler', () => {
       const handler = new HttpHandler(makeConfig());
       const route = {
         upstreams: [{ host: '127.0.0.1', port: 3000 }],
-        balancer: LoadBalancerStrategy.Random
+        balancer: LoadBalancerStrategy.Random,
       };
       const b1 = handler.getBalancer(route);
       const b2 = handler.getBalancer(route);
@@ -260,9 +287,9 @@ describe('HttpHandler', () => {
           upstreams: [
             { host: '127.0.0.1', port: 1 }, // failure
             { host: '127.0.0.1', port: upstreamPort }, // success
-          ]
-        }
-      ]
+          ],
+        },
+      ],
     });
     const handler = new HttpHandler(config);
     const res = await request(handler, '/api/retry');

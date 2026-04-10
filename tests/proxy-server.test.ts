@@ -1,11 +1,20 @@
 import http from 'node:http';
 import net from 'node:net';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ProxyServer, createProxy } from '../src/lib/services/proxy/proxy-server.js';
-import { Logger } from '../src/logger/logger.js';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+import {
+  createProxy,
+  ProxyServer,
+} from '../src/lib/services/proxy/proxy-server.js';
 import type { ConfigType } from '../src/lib/types/config.js';
-import type { Hooks } from '../src/lib/types/hooks.js';
-
+import { Logger } from '../src/logger/logger.js';
 
 let upstreamServer: http.Server;
 let upstreamPort: number;
@@ -16,46 +25,53 @@ function makeConfig(overrides: Partial<ConfigType> = {}): ConfigType {
     routes: [
       {
         match: '/api',
-        upstreams: [{ host: '127.0.0.1', port: upstreamPort }]
-      }
+        upstreams: [{ host: '127.0.0.1', port: upstreamPort }],
+      },
     ],
-    ...overrides
+    ...overrides,
   };
 }
 
 function get(
   port: number,
   path: string,
-  headers: Record<string, string> = {}
-): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
+  headers: Record<string, string> = {},
+): Promise<{
+  status: number;
+  body: string;
+  headers: http.IncomingHttpHeaders;
+}> {
   return new Promise((resolve, reject) => {
-    const req = http.get({ hostname: '127.0.0.1', port, path, headers }, (res) => {
-      const chunks: Buffer[] = [];
-      res.on('data', (c) => chunks.push(c));
-      res.on('end', () => {
-        resolve({
-          status: res.statusCode!,
-          body: Buffer.concat(chunks).toString(),
-          headers: res.headers
+    const req = http.get(
+      { hostname: '127.0.0.1', port, path, headers },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          resolve({
+            status: res.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString(),
+            headers: res.headers,
+          });
         });
-      });
-    });
+      },
+    );
     req.on('error', reject);
   });
 }
 
 function wsUpgrade(
   port: number,
-  path: string
+  path: string,
 ): Promise<{ socket: net.Socket; head: string }> {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host: '127.0.0.1', port }, () => {
       socket.write(
         `GET ${path} HTTP/1.1\r\n` +
-        `Host: 127.0.0.1:${port}\r\n` +
-        `Upgrade: websocket\r\n` +
-        `Connection: Upgrade\r\n` +
-        `\r\n`
+          `Host: 127.0.0.1:${port}\r\n` +
+          `Upgrade: websocket\r\n` +
+          `Connection: Upgrade\r\n` +
+          `\r\n`,
       );
     });
     let data = '';
@@ -120,9 +136,9 @@ describe('ProxyServer', () => {
       routes: [
         {
           match: '/api',
-          upstreams: [{ host: '127.0.0.1', port: 1 }]
-        }
-      ]
+          upstreams: [{ host: '127.0.0.1', port: 1 }],
+        },
+      ],
     });
     const onError = vi.fn();
     const proxy = new ProxyServer(config, { onError });
@@ -140,9 +156,9 @@ describe('ProxyServer', () => {
       routes: [
         {
           match: '/api',
-          upstreams: [{ host: '127.0.0.1', port: 1 }]
-        }
-      ]
+          upstreams: [{ host: '127.0.0.1', port: 1 }],
+        },
+      ],
     });
     const onError = vi.fn();
     const proxy = new ProxyServer(config, { onError });
@@ -210,8 +226,8 @@ describe('ProxyServer', () => {
       socket.once('data', () => {
         socket.write(
           'HTTP/1.1 101 Switching Protocols\r\n' +
-          'Upgrade: websocket\r\n' +
-          'Connection: Upgrade\r\n\r\n'
+            'Upgrade: websocket\r\n' +
+            'Connection: Upgrade\r\n\r\n',
         );
         socket.pipe(socket);
       });
@@ -223,9 +239,9 @@ describe('ProxyServer', () => {
       routes: [
         {
           match: '/ws',
-          upstreams: [{ host: '127.0.0.1', port: wsPort }]
-        }
-      ]
+          upstreams: [{ host: '127.0.0.1', port: wsPort }],
+        },
+      ],
     });
     const proxy = new ProxyServer(config);
     await proxy.listen();
@@ -256,20 +272,23 @@ describe('ProxyServer', () => {
       routes: [
         {
           match: '/ws',
-          upstreams: [{ host: '127.0.0.1', port: 1 }]
-        }
-      ]
+          upstreams: [{ host: '127.0.0.1', port: 1 }],
+        },
+      ],
     });
     const onError = vi.fn();
     const proxy = new ProxyServer(config, { onError });
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
-    const socket = net.createConnection({ host: '127.0.0.1', port: addr.port }, () => {
-      socket.write(
-        `GET /ws/chat HTTP/1.1\r\nHost: 127.0.0.1:${addr.port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n`
-      );
-    });
+    const socket = net.createConnection(
+      { host: '127.0.0.1', port: addr.port },
+      () => {
+        socket.write(
+          `GET /ws/chat HTTP/1.1\r\nHost: 127.0.0.1:${addr.port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n`,
+        );
+      },
+    );
 
     await new Promise((r) => setTimeout(r, 500));
     socket.destroy();
