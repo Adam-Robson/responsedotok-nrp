@@ -11,6 +11,9 @@ import { LoadBalancer } from './load-balancer.js';
 
 export class RandomBalancer extends LoadBalancer {
   pick(upstreams: Upstream[]): Upstream {
+    if (upstreams.length === 0) {
+      throw new Error('No upstreams available');
+    }
     const randomIndex = Math.floor(Math.random() * upstreams.length);
     return upstreams[randomIndex];
   }
