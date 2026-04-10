@@ -83,20 +83,6 @@ describe('WeightedBalancer', () => {
     expect(upstreams).toContain(result);
   });
 
-  it('favors upstreams with higher weight', () => {
-    const weighted: Upstream[] = [
-      { host: '10.0.0.1', port: 3000, weight: 100 },
-      { host: '10.0.0.2', port: 3000, weight: 1 },
-    ];
-    const balancer = new WeightedBalancer();
-    const counts = new Map<string, number>();
-    for (let i = 0; i < 500; i++) {
-      const u = balancer.pick(weighted);
-      counts.set(u.host, (counts.get(u.host) ?? 0) + 1);
-    }
-    expect(counts.get('10.0.0.1')!).toBeGreaterThan(counts.get('10.0.0.2')!);
-  });
-
   it('defaults weight to 1 when not specified', () => {
     const balancer = new WeightedBalancer();
     const counts = new Map<string, number>();

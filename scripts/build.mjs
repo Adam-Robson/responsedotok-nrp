@@ -8,7 +8,7 @@ const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 
 /**
  * Execute a shell command asynchronously in root.
- * 
+ *
  * @param cmd The command to execute.
  * @returns The standard output of the command.
  */
@@ -20,7 +20,7 @@ export function run(cmd) {
 
 /**
  * Recurse through a directory and execute a function in each file.
- * 
+ *
  * @param dir The directory to recurse through.
  * @param fn The function to execute in each file.
  * @returns void
@@ -35,7 +35,7 @@ export function walk(dir, fn) {
 
 /**
  * Copy files from source to destination; preserve source directory structure.
- * 
+ *
  * @param src The source directory.
  * @param dest The destination directory to copy the files to.
  * @returns void
@@ -52,7 +52,7 @@ export function copy(src, dest) {
 
 /**
  * Prepend a shebang to a file that does not have one.
- * 
+ *
  * @param f The file to prepend the shebang to.
  * @param shebang The shebang to prepend.
  * @returns void
@@ -68,42 +68,41 @@ export function shebang(f) {
  * Update common JavaScript files to ES modules by
  * replacing require syntax with imports, and .js extensions
  * with .mjs.
- * 
+ *
  * @param f The file to update.
  * @returns void
  */
 export function esmify(dir) {
-	// first pass
-	const renames = new Map();
-	walk(dir, (file) => {
-		if (file.endsWith('.js')) {
-			const esmFile = file.replace(/\.js$/, '.mjs');
-			renames.set(file, esmFile);
-		}
-	});
+  // first pass
+  const renames = new Map();
+  walk(dir, (file) => {
+    if (file.endsWith('.js')) {
+      const esmFile = file.replace(/\.js$/, '.mjs');
+      renames.set(file, esmFile);
+    }
+  });
   renames.forEach((esmFile, file) => {
     fs.renameSync(file, esmFile);
   });
 
-
-	// second pass
-	walk(dir, (file) => {
-		if (!file.endsWith('.mjs') && !file.endsWith('.d.ts')) return;
-		let src = fs.readFileSync(file, 'utf-8');
-		src = src.replace(
-			/(from\s+["'])(\.{1,2}\/[^"']+?)\.js(["'])/g,
-			"$1$2.mjs$3",
-		);
-		src = src.replace(
-			/(export\s+.*?from\s+["'])(\.{1,2}\/[^"']+?)\.js(["'])/g,
-			'$1$2.mjs$3',
-		);
-		src = src.replace(
-			/\/\/# sourceMappingURL=(.+?)\.js\.map/,
-			'//# sourceMappingURL=$1.mjs.map',
-		);
-		fs.writeFileSync(file, src);
-	});
+  // second pass
+  walk(dir, (file) => {
+    if (!file.endsWith('.mjs') && !file.endsWith('.d.ts')) return;
+    let src = fs.readFileSync(file, 'utf-8');
+    src = src.replace(
+      /(from\s+["'])(\.{1,2}\/[^"']+?)\.js(["'])/g,
+      '$1$2.mjs$3',
+    );
+    src = src.replace(
+      /(export\s+.*?from\s+["'])(\.{1,2}\/[^"']+?)\.js(["'])/g,
+      '$1$2.mjs$3',
+    );
+    src = src.replace(
+      /\/\/# sourceMappingURL=(.+?)\.js\.map/,
+      '//# sourceMappingURL=$1.mjs.map',
+    );
+    fs.writeFileSync(file, src);
+  });
 }
 
 /**
@@ -116,37 +115,33 @@ export function build(dir) {
   try {
     console.info(`▶▶▶ Cleaning ${dir} for build output...`);
     fs.rmSync(dir, { recursive: true, force: true });
-  
+
     console.info('▶▶▶ Building ES modules (tsc -> dist/esm/)...');
     run('npx tsc --project tsconfig.json --outDir dist/esm');
     esmify(path.join(dir, 'esm'));
 
     // Flatten ESM directory to root of build
     console.info(
-      '\n▶▶▶ Copying surface ESM files (dist/esm/) to build root (dist/)...'
+      '\n▶▶▶ Copying surface ESM files (dist/esm/) to build root (dist/)...',
     );
     copy(path.join(dir, 'esm'), dir);
     fs.rmSync(path.join(dir, 'esm'), { recursive: true, force: true });
 
-    console.info(
-      '▶▶▶ Building CJS modules (tsc -> dist/cjs/)...'
-    );
+    console.info('▶▶▶ Building CJS modules (tsc -> dist/cjs/)...');
     run('npx tsc --project tsconfig.cjs.json --outDir dist/cjs');
 
     // Mark CJS files so Node resolves them correctly
-    console.info(
-      '▶▶▶ Marking CJS files for appropriate resolution by Node...'
-    );
+    console.info('▶▶▶ Marking CJS files for appropriate resolution by Node...');
     fs.writeFileSync(
       path.join(dir, 'cjs', 'package.json'),
-      `${JSON.stringify({ type: 'commonjs' }, null, 2)}\n`
+      `${JSON.stringify({ type: 'commonjs' }, null, 2)}\n`,
     );
 
     const candidates = [
       path.join(dir, 'src', 'index.mjs'),
       path.join(dir, 'src', 'index.js'),
       path.join(dir, 'cjs', 'index.cjs'),
-    ]
+    ];
 
     for (const f of candidates) {
       if (fs.existsSync(f)) {
