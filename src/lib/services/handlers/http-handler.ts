@@ -185,10 +185,10 @@ export class HttpHandler {
         }
 
         if (!res.headersSent) {
+          tried.add(upstream);
           const [nextUpstream] = route.upstreams.filter((u) => !tried.has(u));
 
           if (nextUpstream) {
-            tried.add(upstream);
             const nextCtx = { ...ctx, upstream: nextUpstream };
             this.forward(nextCtx, tried).then(resolve);
             return;
