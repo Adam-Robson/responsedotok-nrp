@@ -1,6 +1,6 @@
-import type { Route } from './route.js';
 import type { HeaderRules } from './header-rules.js';
 import type { LoadBalancerStrategy } from './load-balancer-strategy.js';
+import type { Route } from './route.js';
 
 /**
  * Global configuration types.
