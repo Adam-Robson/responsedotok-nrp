@@ -31,8 +31,8 @@ export class HealthService {
   stop(): void {
     for (const t of this.timers) {
       clearInterval(t);
-      this.timers.length = 0;
     }
+    this.timers.length = 0;
   }
 
   isHealthy(u: Upstream): boolean {
