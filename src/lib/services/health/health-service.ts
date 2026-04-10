@@ -58,6 +58,7 @@ export class HealthService {
 
     socket.on('error', () => {
       this.unhealthy.add(key);
+      socket.destroy();
     });
 
     socket.on('timeout', () => {
