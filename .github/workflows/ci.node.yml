@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Tests
+
+on:
+  push:
+    branches: ['main', 'dev']
+
+  pull_request:
+    branches: ['main', 'dev']
+  
+jobs:
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Use node ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Clean dependency install 
+        run: npm ci
+
+      - name: Lint & format with Biome
+        run: npx biome ci .
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test -- --run
+
+      - name: Build
+        run: npm run build

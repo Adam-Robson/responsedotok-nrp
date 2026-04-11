@@ -1,0 +1,47 @@
+{
+	"name": "@responsedotok/nrp",
+	"version": "1.0.0",
+	"type": "module",
+	"description": "Zero dependency Node.js reverse proxy with routing, load balancing, and WebSocket support",
+	"main": "dist/src/index.js",
+	"module": "dist/src/index.js",
+	"types": "dist/src/index.d.ts",
+  "directories": {
+    "src": "src",
+    "test": "tests",
+    "scripts": "scripts"
+  },
+	"exports": {
+		".": {
+			"types": "./dist/src/index.d.ts",
+			"module": "./dist/src/index.js",
+			"require": "./dist/src/index.js"
+		}
+	},
+	"bin": {
+		"nrp": "./dist/src/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"build": "node scripts/build.mjs",
+		"dev": "tsc --watch",
+		"test": "vitest",
+		"biome": "biome check src && biome format --write src",
+		"prepublishOnly": "npm run build && npm run test",
+		"start": "node dist/src/index.js"
+	},
+	"author": "Adam Robson",
+	"license": "MIT",
+	"devDependencies": {
+		 "@biomejs/biome": "2.4.10",
+    "@types/node": "25.5.2",
+    "typescript": "6.0.2",
+    "vitest": "4.1.2"
+	}
+}
+
