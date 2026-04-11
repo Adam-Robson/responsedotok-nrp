@@ -193,7 +193,8 @@ export class HttpHandler {
           const healthyRemaining = remaining.filter((u) =>
             this.healthService.isHealthy(u),
           );
-          const candidates = healthyRemaining.length > 0 ? healthyRemaining : remaining;
+          const candidates =
+            healthyRemaining.length > 0 ? healthyRemaining : remaining;
 
           if (candidates.length > 0) {
             const balancer = this.getBalancer(route);

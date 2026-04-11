@@ -13,13 +13,15 @@ import { LoadBalancer } from './load-balancer.js';
 
 export class WeightedBalancer extends LoadBalancer {
   pick(upstreams: Upstream[]): Upstream {
-     if (upstreams.length === 0) {
+    if (upstreams.length === 0) {
       throw new Error('No upstreams available');
     }
     const weights = upstreams.map((upstream) => {
       const weight = upstream.weight ?? 1;
       if (!Number.isFinite(weight) || weight <= 0) {
-        throw new Error('WeightedBalancer.pick() requires all upstream weights to be positive finite numbers.');
+        throw new Error(
+          'WeightedBalancer.pick() requires all upstream weights to be positive finite numbers.',
+        );
       }
       return weight;
     });

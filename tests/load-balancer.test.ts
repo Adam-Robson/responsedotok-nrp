@@ -30,7 +30,7 @@ describe('createBalancer', () => {
 
   it('throws for an unknown strategy', () => {
     expect(() => createBalancer('unknown' as LoadBalancerStrategy)).toThrow(
-      /Unknown load balancer strategy/
+      /Unknown load balancer strategy/,
     );
   });
 });
