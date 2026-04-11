@@ -11,7 +11,7 @@ import type { Route } from './route.js';
  * @property {HeaderRules} [headers] - Global header rules applied to every request/response.
  * @property {LoadBalancerStrategy} [balancer] - Load balancer strategy - default 'round-robin'.
  * @property {number} [timeout] - Proxy request timeout - default 30000ms (30sec).
- * @property {string[]} [fowardIp] - IP addresses to forward in the X-Forwarded-For header - default true.
+ * @property {boolean} [forwardIp] - Enable or disable forwarding the client IP in the X-Forwarded-For header - default true.
  */
 
 export interface ConfigType {
