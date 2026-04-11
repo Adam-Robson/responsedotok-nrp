@@ -83,6 +83,11 @@ describe('WeightedBalancer', () => {
     expect(upstreams).toContain(result);
   });
 
+  it('throws when no upstreams are provided', () => {
+    const balancer = new WeightedBalancer();
+    expect(() => balancer.pick([])).toThrow('No upstream servers available');
+  });
+
   it('defaults weight to 1 when not specified', () => {
     const balancer = new WeightedBalancer();
     const counts = new Map<string, number>();

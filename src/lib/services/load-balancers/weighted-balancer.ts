@@ -13,6 +13,9 @@ import { LoadBalancer } from './load-balancer.js';
 
 export class WeightedBalancer extends LoadBalancer {
   pick(upstreams: Upstream[]): Upstream {
+    if (upstreams.length === 0) {
+      throw new Error('No upstream servers available');
+    }
     const totalWeight = upstreams.reduce((sum, u) => sum + (u.weight ?? 1), 0);
     let random = Math.random() * totalWeight;
     for (const upstream of upstreams) {
