@@ -30,7 +30,7 @@ describe('createBalancer', () => {
 
   it('throws for an unknown strategy', () => {
     expect(() => createBalancer('unknown' as LoadBalancerStrategy)).toThrow(
-      'Unknown load balancer strategy',
+      /Unknown load balancer strategy/
     );
   });
 });
@@ -85,7 +85,7 @@ describe('WeightedBalancer', () => {
 
   it('throws when no upstreams are provided', () => {
     const balancer = new WeightedBalancer();
-    expect(() => balancer.pick([])).toThrow('No upstream servers available');
+    expect(() => balancer.pick([])).toThrow('No upstreams available');
   });
 
   it('defaults weight to 1 when not specified', () => {

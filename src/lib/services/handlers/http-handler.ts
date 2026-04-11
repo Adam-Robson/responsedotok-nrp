@@ -185,10 +185,19 @@ export class HttpHandler {
         }
 
         if (!res.headersSent) {
+          // Mark current upstream as tried before selecting the next candidate
           tried.add(upstream);
-          const [nextUpstream] = route.upstreams.filter((u) => !tried.has(u));
 
-          if (nextUpstream) {
+          // Prefer healthy remaining candidates, fall back to any remaining
+          const remaining = route.upstreams.filter((u) => !tried.has(u));
+          const healthyRemaining = remaining.filter((u) =>
+            this.healthService.isHealthy(u),
+          );
+          const candidates = healthyRemaining.length > 0 ? healthyRemaining : remaining;
+
+          if (candidates.length > 0) {
+            const balancer = this.getBalancer(route);
+            const nextUpstream = balancer.pick(candidates);
             const nextCtx = { ...ctx, upstream: nextUpstream };
             this.forward(nextCtx, tried).then(resolve);
             return;
