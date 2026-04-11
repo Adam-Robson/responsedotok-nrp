@@ -1,5 +1,6 @@
 import { LoadBalancerStrategy } from '../lib/types/load-balancer-strategy.js';
 import type { LogLevel } from '../lib/types/log.js';
+import { LEVELS } from '../lib/types/log.js';
 
 /**
  * Parse command line arguments to execute the program.
@@ -40,10 +41,18 @@ export function parseArgs(argv: string[]): {
         configPath = args[++i] as string;
         break;
       case '--log-level':
-      case '-l':
+      case '-l': {
         if (i + 1 >= args.length) throw new Error(`Missing value for ${arg}`);
-        logLevel = args[++i] as LogLevel;
+        const value = args[++i] as string;
+        const valid = Object.keys(LEVELS);
+        if (!valid.includes(value)) {
+          throw new Error(
+            `Invalid value for ${arg}: ${value}. Must be one of: ${valid.join(', ')}`,
+          );
+        }
+        logLevel = value as LogLevel;
         break;
+      }
       case '--env':
       case '-e': {
         if (i + 1 >= args.length) throw new Error(`Missing value for ${arg}`);

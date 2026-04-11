@@ -47,33 +47,16 @@ to port 3000.
 
 ## Features
 
-|  Feature        |  Summary                                                |
-| ----------      |  -------                                                |
-| Routing         | Match requests by URL prefix                            |
-|                 | or with a custom function.                              |
-|                 |                                                         |
-| Rewrite path    |  Strip prefix, add  prefix;                             |
-|                 |  replace the entire path before                         |
-|                 |  forwarding.                                            |
-|                 |                                                         |
-| Header control  | Add, override, or remove                                |
-|                 | request/response headers                                |
-|                 | globally or per-route.                                  |
-|                 |                                                         |
-| WebSocket proxy | Transparent TCP tunnel for                              |
-|                 | `Upgrade` requests.                                     |
-|                 |                                                         |
-| Load balancing  | Round-robin, random, or weighted                        |
-|                 |  distribution across multiple                           |
-|                 |  upstream signals.                                      |
-|                 |                                                         |
-| Health checks   |  Periodic TCP probes automatically                      |
-|                 |  remove unhealthy upstreams from rotation.              |
-|                 |                                                         |
-| Lifecycle hooks | Intercept requests, inspect responses, handle errrors   |
-|                 |                                                         |
-| Graceful        | Drains in-flight requests before closingg server.       | 
-| shutdown        |                                                         |
+| Feature         | Summary                                                          |
+| --------------- | ---------------------------------------------------------------- |
+| Routing         | Match requests by URL prefix or with a custom function.          |
+| Rewrite path    | Strip prefix, add prefix; replace the entire path before forwarding. |
+| Header control  | Add, override, or remove request/response headers globally or per-route. |
+| WebSocket proxy | Transparent TCP tunnel for `Upgrade` requests.                   |
+| Load balancing  | Round-robin, random, or weighted distribution across multiple upstream signals. |
+| Health checks   | Periodic TCP probes automatically remove unhealthy upstreams from rotation. |
+| Lifecycle hooks | Intercept requests, inspect responses, handle errors.            |
+| Graceful shutdown | Drains in-flight requests before closing server.               |
 
 ---
 
@@ -83,11 +66,11 @@ to port 3000.
 nrp [options]
 ```
 
-|  Flag               |  Short  |  Default          |  Description                           |
-|  ----               |  -----  |  -------          | -----------                            |
-|`--config <path>`    |`-c`     |`./nrp.config.json`| Path to config                         |
-|`--log-level <level>`|`-l`     |`info`             | `debug`,`info`,`warn`,`error`,`silent` |
-|`--help`             |`-h`     | --                | Print help & exit                      |
+| Flag                 | Short | Default             | Description                            |
+| -------------------- | ----- | ------------------- | -------------------------------------- |
+| `--config <path>`    | `-c`  | `./nrp.config.json` | Path to config                         |
+| `--log-level <level>`| `-l`  | `info`              | `debug`,`info`,`warn`,`error`,`silent` |
+| `--help`             | `-h`  | --                  | Print help & exit                      |
 
 Config files can be `.json`, `.js`, `.mjs` (default export), `.ts`
 

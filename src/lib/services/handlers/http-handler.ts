@@ -15,7 +15,7 @@ import { createBalancer } from '../load-balancers/create-balancer.js';
 import type { LoadBalancer } from '../load-balancers/load-balancer.js';
 
 export class HttpHandler {
-  private readonly balancers = new Map<string, LoadBalancer>();
+  private readonly balancers = new Map<object, LoadBalancer>();
   private readonly globalBalancer: LoadBalancer;
   private readonly httpAgent = new http.Agent({ keepAlive: true });
   private readonly httpsAgent = new https.Agent({ keepAlive: true });
@@ -152,12 +152,18 @@ export class HttpHandler {
         });
 
         if (this.hooks.onResponse) {
-          Promise.resolve(this.hooks.onResponse(ctx, res.statusCode)).then(
-            () => {
+          Promise.resolve(this.hooks.onResponse(ctx, res.statusCode))
+            .catch((err) => {
+              this.handleError(
+                err instanceof Error ? err : new Error(String(err)),
+                ctx,
+                res,
+              );
+            })
+            .then(() => {
               proxyRes.pipe(res, { end: true });
               proxyRes.on('end', resolve);
-            },
-          );
+            });
         } else {
           proxyRes.pipe(res, { end: true });
           proxyRes.on('end', resolve);
@@ -242,16 +248,13 @@ export class HttpHandler {
   }): LoadBalancer {
     if (!route.balancer) return this.globalBalancer;
 
-    const key = route.balancer;
-    if (!this.balancers.has(key)) {
+    if (!this.balancers.has(route)) {
       this.balancers.set(
-        key,
+        route,
         createBalancer(route.balancer as LoadBalancerStrategy),
       );
     }
-    const balancer = this.balancers.get(key);
-    if (!balancer) return this.globalBalancer;
-    return balancer;
+    return this.balancers.get(route) ?? this.globalBalancer;
   }
 
   /**

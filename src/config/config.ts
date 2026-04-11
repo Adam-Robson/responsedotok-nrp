@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { ConfigType } from '../lib/types/config.js';
 
 /**
@@ -104,7 +105,9 @@ export class Config {
       extension === '.mjs' ||
       extension === '.ts'
     ) {
-      const module = (await import(absolutePath)) as { default?: ConfigType };
+      const module = (await import(pathToFileURL(absolutePath).href)) as {
+        default?: ConfigType;
+      };
       raw = module.default ?? module;
     } else {
       throw new Error(`Unsupported config file extension: ${extension}`);
