@@ -6,14 +6,14 @@ import type { ConfigType } from '../lib/types/config.js';
  * Configure global settings.
  *
  * @property {number} port - The port number the server will listen on.
- * @property {string} [host] - The host address the server will bind to (default: '
+ * @property {string} [host] - The host address the server will bind to (default: '0.0.0.0').
  * @property {Route[]} routes - An array of route configurations.
  * @property {HeaderRules} [headers] - Optional header manipulation rules.
  * @property {LoadBalancerStrategy} [balancer] - Optional load balancing strategy.
  * @property {number} [timeout] - Optional request timeout in milliseconds.
  * @property {boolean} [forwardIp] - Whether to forward the client's IP address.
  * @property {number} [maxBodySize] - Maximum allowed size for request bodies in bytes.
- * @property {healthCheck} {{ interval?: number; timeout?: number }} [healthCheck] - Optional health check configuration.
+ * @property {{ interval?: number; timeout?: number }} [healthCheck] - Optional health check configuration.
  *
  */
 
