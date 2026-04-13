@@ -4,6 +4,6 @@ dist
 .DS_Store
 .vscode
 .claude
-memory
-logs
-coverage
+memory/*
+logs/*
+coverage/*
