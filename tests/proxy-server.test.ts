@@ -24,6 +24,10 @@ const silentLogger = new Logger('silent');
 function makeConfig(overrides: Partial<ConfigType> = {}): ConfigType {
   return {
     port: 0,
+    // Pin to 127.0.0.1: on Linux CI 'localhost' often resolves to ::1
+    // first, leaving the test client (which connects to 127.0.0.1) with
+    // ECONNREFUSED.
+    host: '127.0.0.1',
     routes: [
       {
         match: '/api',
@@ -305,6 +309,9 @@ describe('ProxyServer', () => {
         );
       },
     );
+    socket.on('error', () => {
+      /* swallow ECONNRESET when the proxy destroys the socket */
+    });
 
     await vi.waitFor(() => expect(onError).toHaveBeenCalled());
 

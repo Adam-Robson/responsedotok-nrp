@@ -225,6 +225,9 @@ describe('WebSocketHandler', () => {
         );
       },
     );
+    socket.on('error', () => {
+      /* swallow ECONNRESET when the proxy destroys the socket */
+    });
 
     await vi.waitFor(() => expect(harness.rejections).toHaveLength(1));
     expect(harness.rejections[0].message).toMatch(/ECONNREFUSED|connect/i);
