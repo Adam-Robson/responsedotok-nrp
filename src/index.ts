@@ -59,7 +59,7 @@ export async function main(): Promise<void> {
       return true;
     },
     onResponse(ctx, statusCode) {
-      logger.debug('← im with response', {
+      logger.debug('← response', {
         statusCode,
         url: ctx.req.url,
         method: ctx.req.method,
