@@ -30,7 +30,7 @@ export class ProxyServer {
   private readonly logger: Logger;
 
   constructor(config: ConfigType, hooks: Hooks = {}, logger?: Logger) {
-    this.infoger = logger ?? new Logger('info');
+    this.iogger = logger ?? new Logger('info');
     this.httpHandler = new HttpHandler(config, hooks);
 
     const headersService = new HeadersService(
@@ -43,7 +43,7 @@ export class ProxyServer {
       this.httpHandler.handler(req, res).catch((err) => {
         const error = err instanceof Error ? err : new Error(String(err));
         hooks.onError?.(error, { req, res });
-        this.infoger.error('Unhandled request error', {
+        this.logger.error('Unhandled request error', {
           url: req.url,
           message: error.message,
         });
@@ -58,7 +58,7 @@ export class ProxyServer {
       this.wsHandler.upgrade(req, socket, head).catch((err) => {
         const error = err instanceof Error ? err : new Error(String(err));
         hooks.onError?.(error, { req });
-        this.infoger.error('Unhandled WebSocket upgrade error', {
+        this.logger.error('Unhandled WebSocket upgrade error', {
           url: req.url,
           message: error.message,
         });
@@ -85,7 +85,7 @@ export class ProxyServer {
       this.server.once('error', onError);
       this.server.listen(port, host, () => {
         this.server.removeListener('error', onError);
-        this.infoger.info(`Listening on ${host}:${port}`);
+        this.logger.info(`Listening on ${host}:${port}`);
         resolve();
       });
     });
@@ -99,7 +99,7 @@ export class ProxyServer {
    */
   close(drainTimeoutMs = 10_000): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.infoger.info('Shutting down…');
+      this.logger.info('Shutting down…');
       this.httpHandler.stop();
       this.server.closeIdleConnections();
 
@@ -113,7 +113,7 @@ export class ProxyServer {
         if (err) {
           reject(err);
         } else {
-          this.infoger.info('Server closed');
+          this.logger.info('Server closed');
           resolve();
         }
       });

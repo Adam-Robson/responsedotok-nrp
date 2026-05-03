@@ -18,7 +18,6 @@ import type { ConfigType } from './lib/types/config.js';
 
 import { Logger } from './logger/logger.js';
 
-
 /**
  * Reverse-proxy request handler: matches a route, picks a healthy upstream
  * via the configured load balancer, and forwards the request.
@@ -94,23 +93,28 @@ export async function main(): Promise<void> {
   // shutdown with grace
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGQUIT'] as const) {
     process.on(sig, async () => {
-      logger.debug(`✗✗✗ Shut Down Mode ✗✗✗\nReceived ${sig}, Commencing shut down!`, { signal: sig });
+      logger.debug(
+        `✗✗✗ Shut Down Mode ✗✗✗\nReceived ${sig}, Commencing shut down!`,
+        { signal: sig },
+      );
       try {
         await server.close();
         logger.debug('✗✗✗ Graceful shutdown bye ✗✗✗');
         process.exit(0);
       } catch (err) {
-        logger.error('✗✗✗ Error during shutdown; what do you think mopopipo ✗✗✗', {
-          error: err instanceof Error ? err.message : String(err),
-        });
+        logger.error(
+          '✗✗✗ Error during shutdown; what do you think mopopipo ✗✗✗',
+          {
+            error: err instanceof Error ? err.message : String(err),
+          },
+        );
       }
     });
   }
 }
 
-main()
-  .catch((err) => {
-    console.error(
+main().catch((err) => {
+  console.error(
     '✗✗✗ Fatal error ✗✗✗',
     err instanceof Error ? err.message : String(err),
   );

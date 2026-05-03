@@ -35,7 +35,7 @@ export function walk(dir, fn) {
 }
 
 /**
- * Copy files from source to destination; 
+ * Copy files from source to destination;
  * preserve source directory structure.
  *
  * @param src The source directory.
@@ -134,7 +134,9 @@ export function build(dir) {
     run('npx tsc --project tsconfig.cjs.json --outDir dist/cjs');
 
     // Mark CJS files so Node resolves them correctly
-    console.info('\n▶▶▶ ▶▶▶  Marking CJS files for appropriate resolution by Node...\n');
+    console.info(
+      '\n▶▶▶ ▶▶▶  Marking CJS files for appropriate resolution by Node...\n',
+    );
     fs.writeFileSync(
       path.join(dir, 'cjs', 'package.json'),
       `${JSON.stringify({ type: 'commonjs' }, null, 2)}\n`,
@@ -147,7 +149,9 @@ export function build(dir) {
 
     for (const f of candidates) {
       if (fs.existsSync(f)) {
-        console.info(`\n▶▶▶ ▶▶▶ Prepending shebang → ${path.relative(ROOT, f)}\n`);
+        console.info(
+          `\n▶▶▶ ▶▶▶ Prepending shebang → ${path.relative(ROOT, f)}\n`,
+        );
         shebang(f);
       }
     }
