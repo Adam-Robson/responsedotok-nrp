@@ -17,7 +17,7 @@ import { HeadersService } from '../headers/headers-service.js';
  * @example
  * ```ts
  * const server = new ProxyServer(config, {
- *   onRequest(ctx) { console.log(ctx.req.url); return true; },
+ *   onRequest(ctx) { console.info(ctx.req.url); return true; },
  * });
  * await server.listen();
  * process.on('SIGTERM', () => server.close());
@@ -30,7 +30,7 @@ export class ProxyServer {
   private readonly logger: Logger;
 
   constructor(config: ConfigType, hooks: Hooks = {}, logger?: Logger) {
-    this.logger = logger ?? new Logger('info');
+    this.infoger = logger ?? new Logger('info');
     this.httpHandler = new HttpHandler(config, hooks);
 
     const headersService = new HeadersService(
@@ -43,7 +43,7 @@ export class ProxyServer {
       this.httpHandler.handler(req, res).catch((err) => {
         const error = err instanceof Error ? err : new Error(String(err));
         hooks.onError?.(error, { req, res });
-        this.logger.error('Unhandled request error', {
+        this.infoger.error('Unhandled request error', {
           url: req.url,
           message: error.message,
         });
@@ -58,7 +58,7 @@ export class ProxyServer {
       this.wsHandler.upgrade(req, socket, head).catch((err) => {
         const error = err instanceof Error ? err : new Error(String(err));
         hooks.onError?.(error, { req });
-        this.logger.error('Unhandled WebSocket upgrade error', {
+        this.infoger.error('Unhandled WebSocket upgrade error', {
           url: req.url,
           message: error.message,
         });
@@ -85,7 +85,7 @@ export class ProxyServer {
       this.server.once('error', onError);
       this.server.listen(port, host, () => {
         this.server.removeListener('error', onError);
-        this.logger.info(`Listening on ${host}:${port}`);
+        this.infoger.info(`Listening on ${host}:${port}`);
         resolve();
       });
     });
@@ -99,7 +99,7 @@ export class ProxyServer {
    */
   close(drainTimeoutMs = 10_000): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.logger.info('Shutting down…');
+      this.infoger.info('Shutting down…');
       this.httpHandler.stop();
       this.server.closeIdleConnections();
 
@@ -113,7 +113,7 @@ export class ProxyServer {
         if (err) {
           reject(err);
         } else {
-          this.logger.info('Server closed');
+          this.infoger.info('Server closed');
           resolve();
         }
       });

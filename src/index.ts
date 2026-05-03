@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 export { createProxy, ProxyServer } from './lib/services/proxy/proxy-server.js';
 export type { ConfigType } from './lib/types/config.js';
 export type { Context } from './lib/types/context.js';
@@ -14,10 +12,20 @@ import process from 'node:process';
 import { printHelp } from './cli/help.js';
 import { parseArgs } from './cli/parse-args.js';
 import { loadConfig } from './config/load-config.js';
+import { applyEnvOverrides, envOverrides } from './env.js';
 import { ProxyServer } from './lib/services/proxy/proxy-server.js';
 import type { ConfigType } from './lib/types/config.js';
+
 import { Logger } from './logger/logger.js';
 
+
+/**
+ * Reverse-proxy request handler: matches a route, picks a healthy upstream
+ * via the configured load balancer, and forwards the request.
+ *
+ * Owns the shared HTTP/HTTPS agents and the {@link HealthService} lifecycle
+ * (started/stopped via {@link start}/{@link stop}).
+ */
 export async function main(): Promise<void> {
   const { configPath, logLevel, help } = parseArgs(process.argv);
 
@@ -32,6 +40,7 @@ export async function main(): Promise<void> {
 
   try {
     config = await loadConfig(configPath);
+    config = applyEnvOverrides(config, envOverrides());
     logger.debug(`Config loaded from ${configPath}:`, { config: configPath });
   } catch (err) {
     logger.error(`Failed to load config from ${configPath}:`, {
@@ -51,7 +60,7 @@ export async function main(): Promise<void> {
       return true;
     },
     onResponse(ctx, statusCode) {
-      logger.debug('← response', {
+      logger.debug('← im with response', {
         statusCode,
         url: ctx.req.url,
         method: ctx.req.method,
@@ -60,7 +69,7 @@ export async function main(): Promise<void> {
       });
     },
     onError(error, ctx) {
-      logger.error('✗ proxy error', {
+      logger.error('✗✗✗ proxy error ✗✗✗', {
         error: error.message,
         url: ctx?.req?.url,
         method: ctx?.req?.method,
@@ -85,13 +94,13 @@ export async function main(): Promise<void> {
   // shutdown with grace
   for (const sig of ['SIGINT', 'SIGTERM', 'SIGQUIT'] as const) {
     process.on(sig, async () => {
-      logger.debug(`Received ${sig}, shutting down...`, { signal: sig });
+      logger.debug(`✗✗✗ Shut Down Mode ✗✗✗\nReceived ${sig}, Commencing shut down!`, { signal: sig });
       try {
         await server.close();
-        logger.debug('Proxy server closed gracefully');
+        logger.debug('✗✗✗ Graceful shutdown bye ✗✗✗');
         process.exit(0);
       } catch (err) {
-        logger.error('Error during shutdown', {
+        logger.error('✗✗✗ Error during shutdown; what do you think mopopipo ✗✗✗', {
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -99,9 +108,10 @@ export async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(
-    'Fatal error:',
+main()
+  .catch((err) => {
+    console.error(
+    '✗✗✗ Fatal error ✗✗✗',
     err instanceof Error ? err.message : String(err),
   );
   process.exit(1);

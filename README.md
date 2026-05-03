@@ -108,11 +108,11 @@ const config: ConfigType = {
 
 const server = new ProxyServer(config, {
   onRequest(ctx) {
-    console.log(`-> ${ctx.req.method} ${ctx.req.url}`);
+    console.info(`-> ${ctx.req.method} ${ctx.req.url}`);
     return true; // return false to abort with 403
   },
   onResponse(ctx, statusCode) {
-    console.log(`<- ${statusCode}`);
+    console.info(`<- ${statusCode}`);
   },
   onError(err, ctx) {
     console.error(err.message, ctx.req?.url);

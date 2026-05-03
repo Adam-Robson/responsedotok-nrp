@@ -14,6 +14,9 @@ import { HealthService } from '../health/health-service.js';
 import { createBalancer } from '../load-balancers/create-balancer.js';
 import type { LoadBalancer } from '../load-balancers/load-balancer.js';
 
+/** 
+ * HTTP handler responsible for processing incoming HTTP requests, performing load balancing, and forwarding requests to upstream servers. It also integrates health checks and supports hooks for request/response lifecycle events.
+*/
 export class HttpHandler {
   private readonly balancers = new Map<object, LoadBalancer>();
   private readonly globalBalancer: LoadBalancer;

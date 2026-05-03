@@ -18,7 +18,7 @@ export function printHelp(): void {
 
     **CONFIG FORMAT**
 
-    DEFAULT CONFIG FILE: proxy.config.json
+    DEFAULT CONFIG: proxy.config.json
 
     {
       "port": 8080,

@@ -31,7 +31,7 @@ export class Config {
 
   private constructor(cfg: ConfigType) {
     this.port = cfg.port;
-    this.host = cfg.host ?? '0.0.0.0';
+    this.host = cfg.host ?? 'localhost';
     this.routes = cfg.routes;
     this.headers = cfg.headers;
     this.balancer = cfg.balancer;

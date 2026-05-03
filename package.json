@@ -14,12 +14,12 @@
 	"exports": {
 		".": {
 			"types": "./dist/src/index.d.ts",
-			"module": "./dist/src/index.js",
+			"module": "./dist/src/index.mjs",
 			"require": "./dist/src/index.js"
 		}
 	},
 	"bin": {
-		"nrp": "./dist/src/index.js"
+		"nrp": "./dist/src/index.mjs"
 	},
 	"files": [
 		"dist"
@@ -33,7 +33,7 @@
 		"test": "vitest",
 		"biome": "biome check src && biome format --write src",
 		"prepublishOnly": "npm run build && npm run test",
-		"start": "node dist/src/index.js"
+		"start": "node dist/src/index.mjs"
 	},
 	"author": "Adam Robson",
 	"license": "MIT",
