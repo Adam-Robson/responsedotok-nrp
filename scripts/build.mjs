@@ -14,12 +14,13 @@ const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
  */
 
 export function run(cmd) {
-  console.info(`$ ${cmd}`);
+  console.info(`\n$ ${cmd}\n`);
   execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
 }
 
 /**
- * Recurse through a directory and execute a function in each file.
+ * Recurse through a directory and execute a function
+ * in each file.
  *
  * @param dir The directory to recurse through.
  * @param fn The function to execute in each file.
@@ -34,7 +35,8 @@ export function walk(dir, fn) {
 }
 
 /**
- * Copy files from source to destination; preserve source directory structure.
+ * Copy files from source to destination;
+ * preserve source directory structure.
  *
  * @param src The source directory.
  * @param dest The destination directory to copy the files to.
@@ -62,6 +64,7 @@ export function shebang(f) {
   if (!content.startsWith('#')) {
     fs.writeFileSync(f, `#!/usr/bin/env node\n${content}`, 'utf-8');
   }
+  fs.chmodSync(f, 0o755);
 }
 
 /**
@@ -113,25 +116,27 @@ export function esmify(dir) {
  */
 export function build(dir) {
   try {
-    console.info(`▶▶▶ Cleaning ${dir} for build output...`);
+    console.info(`\n▶▶▶ ▶▶▶  Cleaning ${dir} for build output...\n`);
     fs.rmSync(dir, { recursive: true, force: true });
 
-    console.info('▶▶▶ Building ES modules (tsc -> dist/esm/)...');
+    console.info('\n▶▶▶ ▶▶▶  Building ES modules (tsc -> dist/esm/)...\n');
     run('npx tsc --project tsconfig.json --outDir dist/esm');
     esmify(path.join(dir, 'esm'));
 
     // Flatten ESM directory to root of build
     console.info(
-      '\n▶▶▶ Copying surface ESM files (dist/esm/) to build root (dist/)...',
+      '\n▶▶▶ ▶▶▶  Copying surface ESM files (dist/esm/) to build root (dist/)...\n',
     );
     copy(path.join(dir, 'esm'), dir);
     fs.rmSync(path.join(dir, 'esm'), { recursive: true, force: true });
 
-    console.info('▶▶▶ Building CJS modules (tsc -> dist/cjs/)...');
+    console.info('\n▶▶▶ ▶▶▶  Building CJS modules (tsc -> dist/cjs/)...\n');
     run('npx tsc --project tsconfig.cjs.json --outDir dist/cjs');
 
     // Mark CJS files so Node resolves them correctly
-    console.info('▶▶▶ Marking CJS files for appropriate resolution by Node...');
+    console.info(
+      '\n▶▶▶ ▶▶▶  Marking CJS files for appropriate resolution by Node...\n',
+    );
     fs.writeFileSync(
       path.join(dir, 'cjs', 'package.json'),
       `${JSON.stringify({ type: 'commonjs' }, null, 2)}\n`,
@@ -139,36 +144,37 @@ export function build(dir) {
 
     const candidates = [
       path.join(dir, 'src', 'index.mjs'),
-      path.join(dir, 'src', 'index.js'),
-      path.join(dir, 'cjs', 'index.cjs'),
+      path.join(dir, 'cjs', 'src', 'index.js'),
     ];
 
     for (const f of candidates) {
       if (fs.existsSync(f)) {
-        console.log(`\n▶▶▶ Prepending shebang → ${path.relative(dir, f)}`);
+        console.info(
+          `\n▶▶▶ ▶▶▶ Prepending shebang → ${path.relative(ROOT, f)}\n`,
+        );
         shebang(f);
       }
     }
 
-    console.info('▶▶▶ Build complete!');
+    console.info('\n▶▶▶ ▶▶▶  Build complete!\n');
     const report = [
-      'dist/index.mjs',
-      'dist/index.d.ts',
-      'dist/cli/index.mjs',
-      'dist/cjs/index.js',
-      'dist/cjs/cli/index.js',
+      'dist/src/index.mjs',
+      'dist/src/index.d.ts',
+      'dist/src/cli/index.mjs',
+      'dist/cjs/src/index.js',
+      'dist/cjs/src/cli/index.js',
     ];
     for (const f of report) {
       const full = path.join(dir, f);
       if (fs.existsSync(full)) {
         const kb = (fs.statSync(full).size / 1024).toFixed(1);
-        console.info(`  ${f.padEnd(32)} ${kb} kB`);
+        console.info(`\n  ${f.padEnd(32)} ${kb} kB\n`);
       }
     }
-    console.info('Exiting...');
+    console.info('\n▶▶▶ ▶▶▶  Exiting...\n');
     process.exit(0);
   } catch (err) {
-    console.error('▶▶▶ Build failed with error:');
+    console.error(`\n▶▶▶ ▶▶▶ Build failed with error:\n`);
     console.error(err);
     process.exit(1);
   }

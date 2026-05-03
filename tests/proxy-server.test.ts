@@ -19,9 +19,15 @@ import { Logger } from '../src/logger/logger.js';
 let upstreamServer: http.Server;
 let upstreamPort: number;
 
+const silentLogger = new Logger('silent');
+
 function makeConfig(overrides: Partial<ConfigType> = {}): ConfigType {
   return {
     port: 0,
+    // Pin to 127.0.0.1: on Linux CI 'localhost' often resolves to ::1
+    // first, leaving the test client (which connects to 127.0.0.1) with
+    // ECONNREFUSED.
+    host: '127.0.0.1',
     routes: [
       {
         match: '/api',
@@ -30,6 +36,23 @@ function makeConfig(overrides: Partial<ConfigType> = {}): ConfigType {
     ],
     ...overrides,
   };
+}
+
+function makeProxy(
+  config: ConfigType = makeConfig(),
+  hooks = {},
+  logger: Logger = silentLogger,
+): ProxyServer {
+  return new ProxyServer(config, hooks, logger);
+}
+
+/** See websocket-handler.test.ts: bind+close yields a deterministically refused port. */
+async function refusedPort(): Promise<number> {
+  const server = net.createServer();
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as net.AddressInfo).port;
+  await new Promise<void>((r) => server.close(() => r()));
+  return port;
 }
 
 function get(
@@ -86,8 +109,6 @@ function wsUpgrade(
   });
 }
 
-// --- lifecycle --------------------------------------------------------------
-
 beforeAll(async () => {
   upstreamServer = http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': 'text/plain' });
@@ -105,11 +126,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// --- tests ------------------------------------------------------------------
-
 describe('ProxyServer', () => {
   it('listens and proxies HTTP requests to the upstream', async () => {
-    const proxy = new ProxyServer(makeConfig());
+    const proxy = makeProxy();
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
@@ -121,7 +140,7 @@ describe('ProxyServer', () => {
   });
 
   it('returns 502 for unmatched routes', async () => {
-    const proxy = new ProxyServer(makeConfig());
+    const proxy = makeProxy();
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
@@ -132,16 +151,12 @@ describe('ProxyServer', () => {
   });
 
   it('catches unhandled request errors and returns 502', async () => {
+    const port = await refusedPort();
     const config = makeConfig({
-      routes: [
-        {
-          match: '/api',
-          upstreams: [{ host: '127.0.0.1', port: 1 }],
-        },
-      ],
+      routes: [{ match: '/api', upstreams: [{ host: '127.0.0.1', port }] }],
     });
     const onError = vi.fn();
-    const proxy = new ProxyServer(config, { onError });
+    const proxy = makeProxy(config, { onError });
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
@@ -152,16 +167,12 @@ describe('ProxyServer', () => {
   });
 
   it('calls the onError hook when a request fails', async () => {
+    const port = await refusedPort();
     const config = makeConfig({
-      routes: [
-        {
-          match: '/api',
-          upstreams: [{ host: '127.0.0.1', port: 1 }],
-        },
-      ],
+      routes: [{ match: '/api', upstreams: [{ host: '127.0.0.1', port }] }],
     });
     const onError = vi.fn();
-    const proxy = new ProxyServer(config, { onError });
+    const proxy = makeProxy(config, { onError });
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
@@ -172,20 +183,27 @@ describe('ProxyServer', () => {
   });
 
   it('rejects listen() when the port is already in use', async () => {
-    const proxy1 = new ProxyServer(makeConfig());
+    const proxy1 = makeProxy();
     await proxy1.listen();
     const addr = proxy1.httpServer.address() as net.AddressInfo;
 
-    const proxy2 = new ProxyServer(makeConfig({ port: addr.port }));
+    const proxy2 = makeProxy(makeConfig({ port: addr.port }));
     await expect(proxy2.listen()).rejects.toThrow();
 
     await proxy1.close();
   });
 
+  it('rejects listen() when called twice on the same instance', async () => {
+    const proxy = makeProxy();
+    await proxy.listen();
+    await expect(proxy.listen()).rejects.toThrow(/already called/);
+    await proxy.close();
+  });
+
   it('uses a custom logger when provided', async () => {
     const logger = new Logger('debug');
     const infoSpy = vi.spyOn(logger, 'info');
-    const proxy = new ProxyServer(makeConfig(), {}, logger);
+    const proxy = makeProxy(makeConfig(), {}, logger);
     await proxy.listen();
 
     expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('Listening'));
@@ -196,7 +214,7 @@ describe('ProxyServer', () => {
   it('logs shutdown messages on close', async () => {
     const logger = new Logger('debug');
     const infoSpy = vi.spyOn(logger, 'info');
-    const proxy = new ProxyServer(makeConfig(), {}, logger);
+    const proxy = makeProxy(makeConfig(), {}, logger);
     await proxy.listen();
     await proxy.close();
 
@@ -205,12 +223,12 @@ describe('ProxyServer', () => {
   });
 
   it('exposes the underlying http.Server via httpServer getter', () => {
-    const proxy = new ProxyServer(makeConfig());
+    const proxy = makeProxy();
     expect(proxy.httpServer).toBeInstanceOf(http.Server);
   });
 
   it('defaults to empty hooks when none are provided', async () => {
-    const proxy = new ProxyServer(makeConfig());
+    const proxy = makeProxy();
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
@@ -221,7 +239,6 @@ describe('ProxyServer', () => {
   });
 
   it('handles WebSocket upgrades through the proxy', async () => {
-    // Set up a minimal upstream that accepts upgrades
     const wsUpstreamServer = net.createServer((socket) => {
       socket.once('data', () => {
         socket.write(
@@ -243,7 +260,7 @@ describe('ProxyServer', () => {
         },
       ],
     });
-    const proxy = new ProxyServer(config);
+    const proxy = makeProxy(config);
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
@@ -255,29 +272,32 @@ describe('ProxyServer', () => {
     await new Promise<void>((r) => wsUpstreamServer.close(() => r()));
   });
 
-  it('destroys socket on WebSocket upgrade to unmatched route', async () => {
-    const proxy = new ProxyServer(makeConfig());
+  it('calls onError and writes 502 for unmatched WebSocket route', async () => {
+    const onError = vi.fn();
+    const proxy = makeProxy(makeConfig(), { onError });
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
     const { socket, head } = await wsUpgrade(addr.port, '/no-match');
     expect(head).toContain('502');
+    await vi.waitFor(() => expect(onError).toHaveBeenCalled());
 
     socket.destroy();
     await proxy.close();
   });
 
   it('calls onError hook for failed WebSocket upgrades', async () => {
+    const port = await refusedPort();
     const config = makeConfig({
       routes: [
         {
           match: '/ws',
-          upstreams: [{ host: '127.0.0.1', port: 1 }],
+          upstreams: [{ host: '127.0.0.1', port }],
         },
       ],
     });
     const onError = vi.fn();
-    const proxy = new ProxyServer(config, { onError });
+    const proxy = makeProxy(config, { onError });
     await proxy.listen();
     const addr = proxy.httpServer.address() as net.AddressInfo;
 
@@ -289,19 +309,20 @@ describe('ProxyServer', () => {
         );
       },
     );
+    socket.on('error', () => {
+      /* swallow ECONNRESET when the proxy destroys the socket */
+    });
 
-    await new Promise((r) => setTimeout(r, 500));
+    await vi.waitFor(() => expect(onError).toHaveBeenCalled());
+
     socket.destroy();
     await proxy.close();
-
-    // The error could be caught in the WebSocketHandler or bubble to ProxyServer's catch
-    expect(onError).toHaveBeenCalled();
   });
 });
 
 describe('createProxy', () => {
   it('creates and starts a proxy server', async () => {
-    const proxy = await createProxy(makeConfig());
+    const proxy = await createProxy(makeConfig(), {}, silentLogger);
     const addr = proxy.httpServer.address() as net.AddressInfo;
     expect(addr.port).toBeGreaterThan(0);
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyEnvOverrides, envOverrides } from '../scripts/env.js';
+import { applyEnvOverrides, envOverrides } from '../src/env.js';
 import type { ConfigType } from '../src/lib/types/config.js';
 
 const baseConfig: ConfigType = {

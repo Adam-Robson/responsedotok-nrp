@@ -16,7 +16,7 @@ export class RoundRobinBalancer extends LoadBalancer {
       throw new Error('No upstreams available');
     }
     const upstream = upstreams[this.idx % upstreams.length];
-    this.idx++;
+    this.idx = (this.idx + 1) % upstreams.length;
     return upstream;
   }
 }

@@ -1,0 +1,29 @@
+{
+  "port": 8080,
+  "balancer": "round-robin",
+  "headers": {
+    "response": {
+      "x-powered-by": "nrp",
+      "x-proxy-version": "0.1.0"
+    },
+    "removeResponse": ["server"]
+  },
+  "routes": [
+    {
+      "match": "/api",
+      "rewrite": { "stripPrefix": "/api" },
+      "upstreams": [{ "host": "localhost", "port": 3001 }],
+      "headers": {
+        "request": { "x-internal": "true" }
+      }
+    },
+    {
+      "match": "/",
+      "upstreams": [{ "host": "localhost", "port": 3001 }]
+    },
+    {
+      "match": "/ws",
+      "upstreams": [{ "host": "localhost", "port": 4000 }]
+    }
+  ]
+}
