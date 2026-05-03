@@ -29,8 +29,12 @@ export class ProxyServer {
   private readonly wsHandler: WebSocketHandler;
   private readonly logger: Logger;
 
-  constructor(config: ConfigType, hooks: Hooks = {}, logger?: Logger) {
-    this.iogger = logger ?? new Logger('info');
+  constructor(
+    config: ConfigType,
+    hooks: Hooks = {},
+    logger: Logger | undefined = undefined,
+  ) {
+    this.logger = logger ?? new Logger();
     this.httpHandler = new HttpHandler(config, hooks);
 
     const headersService = new HeadersService(
@@ -73,7 +77,7 @@ export class ProxyServer {
    * (e.g. EADDRINUSE).
    */
   listen(): Promise<void> {
-    const { port, host = '0.0.0.0' } = this.httpHandler.config;
+    const { port, host = 'localhost' } = this.httpHandler.config;
     return new Promise((resolve, reject) => {
       this.httpHandler.start();
 
