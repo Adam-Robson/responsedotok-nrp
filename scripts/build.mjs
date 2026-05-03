@@ -175,7 +175,7 @@ export function build(dir) {
     process.exit(0);
   } catch (err) {
     console.error(`\n▶▶▶ ▶▶▶ Build failed with error:\n`);
-    console.error(`\n${err}\n`);
+    console.error(err);
     process.exit(1);
   }
 }
