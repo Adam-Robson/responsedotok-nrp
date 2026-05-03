@@ -14,20 +14,13 @@ import { HeadersService } from '../headers/headers-service.js';
  * upgrades to upstream servers according to the provided configuration
  * and lifecycle hooks.
  *
- * @example
- * ```ts
- * const server = new ProxyServer(config, {
- *   onRequest(ctx) { console.info(ctx.req.url); return true; },
- * });
- * await server.listen();
- * process.on('SIGTERM', () => server.close());
- * ```
  */
 export class ProxyServer {
   private readonly server: http.Server;
   private readonly httpHandler: HttpHandler;
   private readonly wsHandler: WebSocketHandler;
   private readonly logger: Logger;
+  private listening = false;
 
   constructor(
     config: ConfigType,
@@ -35,12 +28,12 @@ export class ProxyServer {
     logger: Logger | undefined = undefined,
   ) {
     this.logger = logger ?? new Logger();
-    this.httpHandler = new HttpHandler(config, hooks);
 
     const headersService = new HeadersService(
       config.headers,
       config.forwardIp ?? true,
     );
+    this.httpHandler = new HttpHandler(config, hooks, headersService);
     this.wsHandler = new WebSocketHandler(this.httpHandler, headersService);
 
     this.server = http.createServer((req, res) => {
@@ -62,27 +55,33 @@ export class ProxyServer {
       this.wsHandler.upgrade(req, socket, head).catch((err) => {
         const error = err instanceof Error ? err : new Error(String(err));
         hooks.onError?.(error, { req });
-        this.logger.error('Unhandled WebSocket upgrade error', {
+        this.logger.error('WebSocket upgrade failed', {
           url: req.url,
           message: error.message,
         });
-        socket.destroy();
+        if (!socket.destroyed) socket.destroy();
       });
     });
   }
 
   /**
    * Start health-check probes and bind the server to the configured
-   * host and port.  Rejects if the underlying server emits an error
-   * (e.g. EADDRINUSE).
+   * host and port. Rejects if the underlying server emits an error
+   * (e.g. EADDRINUSE) or if listen() has already been called.
    */
   listen(): Promise<void> {
+    if (this.listening) {
+      return Promise.reject(new Error('ProxyServer.listen() already called'));
+    }
+    this.listening = true;
+
     const { port, host = 'localhost' } = this.httpHandler.config;
     return new Promise((resolve, reject) => {
       this.httpHandler.start();
 
       const onError = (err: Error) => {
         this.httpHandler.stop();
+        this.listening = false;
         reject(err);
       };
 
@@ -114,6 +113,7 @@ export class ProxyServer {
 
       this.server.close((err) => {
         clearTimeout(timer);
+        this.listening = false;
         if (err) {
           reject(err);
         } else {

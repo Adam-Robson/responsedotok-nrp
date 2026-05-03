@@ -18,6 +18,20 @@ let upstreamServer: http.Server;
 let upstreamPort: number;
 
 /**
+ * Bind a TCP listener and immediately close it to obtain a port that
+ * deterministically refuses connections, regardless of CI sandbox
+ * policy on low-numbered ports.
+ */
+async function refusedPort(): Promise<number> {
+  const net = await import('node:net');
+  const server = net.createServer();
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as import('net').AddressInfo).port;
+  await new Promise<void>((r) => server.close(() => r()));
+  return port;
+}
+
+/**
  * Create config object for test; allow overrides.
  * @param overrides
  * @returns Config object with defaults for testing, overridden when necessary.
@@ -195,13 +209,14 @@ describe('HttpHandler', () => {
   });
 
   it('calls onError hook and returns 502 when upstream is unreachable', async () => {
+    const port = await refusedPort();
     const onError = vi.fn();
     const hooks: Hooks = { onError };
     const config = makeConfig({
       routes: [
         {
           match: '/api',
-          upstreams: [{ host: '127.0.0.1', port: 1 }],
+          upstreams: [{ host: '127.0.0.1', port }],
         },
       ],
     });
@@ -209,6 +224,30 @@ describe('HttpHandler', () => {
     const res = await request(handler, '/api/fail');
     expect(res.status).toBe(502);
     expect(onError).toHaveBeenCalled();
+  });
+
+  it('does not retry POST requests with a body when the first upstream fails', async () => {
+    const refused = await refusedPort();
+    const config = makeConfig({
+      routes: [
+        {
+          match: '/api',
+          upstreams: [
+            { host: '127.0.0.1', port: refused },
+            { host: '127.0.0.1', port: upstreamPort },
+          ],
+        },
+      ],
+    });
+    const handler = new HttpHandler(config);
+    const res = await request(handler, '/api/data', {
+      method: 'POST',
+      headers: { 'content-length': '5' },
+      body: 'hello',
+    });
+    // First upstream is refused; retry would silently lose the body, so
+    // the handler must surface the failure rather than retry.
+    expect(res.status).toBe(502);
   });
 
   it('applies rewrite rules to the forwarded path', async () => {
@@ -279,14 +318,15 @@ describe('HttpHandler', () => {
     });
   });
 
-  it('retries on the next upstream when the first fails', async () => {
+  it('retries on the next upstream when the first fails (idempotent GET)', async () => {
+    const refused = await refusedPort();
     const config = makeConfig({
       routes: [
         {
           match: '/api',
           upstreams: [
-            { host: '127.0.0.1', port: 1 }, // failure
-            { host: '127.0.0.1', port: upstreamPort }, // success
+            { host: '127.0.0.1', port: refused },
+            { host: '127.0.0.1', port: upstreamPort },
           ],
         },
       ],

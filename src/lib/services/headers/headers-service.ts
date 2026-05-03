@@ -62,6 +62,38 @@ export class HeadersService {
   }
 
   /**
+   * Build headers for a WebSocket (or other protocol) upgrade.
+   *
+   * The hop-by-hop list explicitly includes `Connection` and `Upgrade`,
+   * but those are exactly the headers a 101 handshake requires. This
+   * variant preserves them while still merging route + global rules.
+   */
+
+  buildUpgradeHeaders(
+    req: IncomingMessage,
+    routeRules: HeaderRules | undefined,
+    upstream: { host: string; port: number },
+  ): IncomingHttpHeaders {
+    const headers = this.buildRequestHeaders(req, routeRules, upstream);
+    if (req.headers.upgrade) headers.upgrade = req.headers.upgrade;
+    headers.connection = req.headers.connection ?? 'Upgrade';
+    if (req.headers['sec-websocket-key']) {
+      headers['sec-websocket-key'] = req.headers['sec-websocket-key'];
+    }
+    if (req.headers['sec-websocket-version']) {
+      headers['sec-websocket-version'] = req.headers['sec-websocket-version'];
+    }
+    if (req.headers['sec-websocket-protocol']) {
+      headers['sec-websocket-protocol'] = req.headers['sec-websocket-protocol'];
+    }
+    if (req.headers['sec-websocket-extensions']) {
+      headers['sec-websocket-extensions'] =
+        req.headers['sec-websocket-extensions'];
+    }
+    return headers;
+  }
+
+  /**
    * Apply response headers based on the given route rules.
    * @param res The server response to apply headers to.
    * @param routeRules The header rules for the route.

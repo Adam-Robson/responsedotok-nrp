@@ -14,16 +14,6 @@ import { WebSocketHandler } from '../src/lib/services/handlers/websocket-handler
 import { HeadersService } from '../src/lib/services/headers/headers-service.js';
 import type { ConfigType } from '../src/lib/types/config.js';
 
-/**
- * Tests for WebSocketHandler. These are more like integration tests since they
- * involve actual TCP connections and a minimal HTTP server to simulate the
- * proxy and upstream. The focus is on verifying that WebSocket upgrade requests
- * are correctly handled, routed to the upstream, and that errors are handled
- * gracefully.
- *
- * @params overrides - Partial config overrides to customize the proxy
- * configuration for each test case.
- */
 let wsUpstream: net.Server;
 let wsUpstreamPort: number;
 
@@ -41,9 +31,41 @@ function makeConfig(overrides: Partial<ConfigType> = {}): ConfigType {
 }
 
 /**
- * Minimal WebSocket-like upgrade: send an HTTP upgrade request and return the
- * raw socket + upstream response line.
+ * Bind a TCP listener and immediately close it. The OS won't reuse the
+ * port instantly, so connections to it produce a deterministic
+ * ECONNREFUSED — much more reliable than relying on port 1 being unused
+ * in arbitrary CI environments.
  */
+async function refusedPort(): Promise<number> {
+  const server = net.createServer();
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  const port = (server.address() as net.AddressInfo).port;
+  await new Promise<void>((r) => server.close(() => r()));
+  return port;
+}
+
+interface ProxyHarness {
+  port: number;
+  rejections: Error[];
+  close: () => Promise<void>;
+}
+
+async function bindHarness(wsHandler: WebSocketHandler): Promise<ProxyHarness> {
+  const rejections: Error[] = [];
+  const proxyServer = http.createServer();
+  proxyServer.on('upgrade', (req, socket, head) => {
+    wsHandler
+      .upgrade(req, socket as net.Socket, head)
+      .catch((err: Error) => rejections.push(err));
+  });
+  await new Promise<void>((r) => proxyServer.listen(0, '127.0.0.1', r));
+  return {
+    port: (proxyServer.address() as net.AddressInfo).port,
+    rejections,
+    close: () => new Promise<void>((r) => proxyServer.close(() => r())),
+  };
+}
+
 function upgrade(
   proxyPort: number,
   path: string,
@@ -64,21 +86,15 @@ function upgrade(
     let data = '';
     socket.on('data', (chunk) => {
       data += chunk.toString();
-      if (data.includes('\r\n')) {
-        resolve({ socket, head: data });
-      }
+      if (data.includes('\r\n')) resolve({ socket, head: data });
     });
     socket.on('error', reject);
     setTimeout(() => reject(new Error('upgrade timeout')), 3000);
   });
 }
 
-/**
- * Test infrastructure
- */
 beforeAll(async () => {
-  // Minimal TCP server that responds with upgrade to any request,
-  // simulating an upstream that accepts WebSocket connections.
+  // Capture the request line + headers so tests can verify what the proxy forwarded.
   wsUpstream = net.createServer((socket) => {
     socket.once('data', () => {
       socket.write(
@@ -101,103 +117,120 @@ afterEach(() => {
 
 describe('WebSocketHandler', () => {
   it('tunnels a WebSocket upgrade to the upstream', async () => {
-    const config = makeConfig();
-    const httpHandler = new HttpHandler(config);
+    const httpHandler = new HttpHandler(makeConfig());
     const headersService = new HeadersService(undefined, true);
     const wsHandler = new WebSocketHandler(httpHandler, headersService);
+    const harness = await bindHarness(wsHandler);
 
-    const proxyServer = http.createServer();
-    proxyServer.on('upgrade', (req, socket, head) => {
-      wsHandler.upgrade(req, socket as net.Socket, head);
-    });
-    await new Promise<void>((r) => proxyServer.listen(0, '127.0.0.1', r));
-    const proxyPort = (proxyServer.address() as net.AddressInfo).port;
-
-    const { socket, head } = await upgrade(proxyPort, '/ws/chat');
+    const { socket, head } = await upgrade(harness.port, '/ws/chat');
     expect(head).toContain('101');
+    expect(harness.rejections).toEqual([]);
 
     socket.destroy();
-    await new Promise<void>((r) => proxyServer.close(() => r()));
+    await harness.close();
   });
 
-  it('destroys socket with 502 when no route matches', async () => {
-    const config = makeConfig();
+  it('forwards Upgrade and Connection headers to the upstream', async () => {
+    // Capture what the proxy sends to the upstream so we can verify the WS
+    // handshake is intact (the global wsUpstream ignores headers).
+    const captured: string[] = [];
+    const captureServer = net.createServer((socket) => {
+      socket.once('data', (chunk) => {
+        captured.push(chunk.toString());
+        socket.write(
+          'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n',
+        );
+      });
+    });
+    await new Promise<void>((r) => captureServer.listen(0, '127.0.0.1', r));
+    const capturePort = (captureServer.address() as net.AddressInfo).port;
+
+    const config = makeConfig({
+      routes: [
+        {
+          match: '/ws',
+          upstreams: [{ host: '127.0.0.1', port: capturePort }],
+        },
+      ],
+    });
     const httpHandler = new HttpHandler(config);
     const headersService = new HeadersService(undefined, true);
     const wsHandler = new WebSocketHandler(httpHandler, headersService);
+    const harness = await bindHarness(wsHandler);
 
-    const proxyServer = http.createServer();
-    proxyServer.on('upgrade', (req, socket, head) => {
-      wsHandler.upgrade(req, socket as net.Socket, head);
-    });
-    await new Promise<void>((r) => proxyServer.listen(0, '127.0.0.1', r));
-    const proxyPort = (proxyServer.address() as net.AddressInfo).port;
-
-    const { socket, head } = await upgrade(proxyPort, '/no-match');
-    expect(head).toContain('502');
+    const { socket } = await upgrade(harness.port, '/ws/chat');
+    await vi.waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    const forwarded = captured[0].toLowerCase();
+    expect(forwarded).toMatch(/upgrade:\s*websocket/);
+    expect(forwarded).toMatch(/connection:\s*upgrade/i);
 
     socket.destroy();
-    await new Promise<void>((r) => proxyServer.close(() => r()));
+    await harness.close();
+    await new Promise<void>((r) => captureServer.close(() => r()));
   });
 
-  it('destroys socket with 502 when route has no upstreams', async () => {
+  it('rejects with 502 on the wire when no route matches', async () => {
+    const httpHandler = new HttpHandler(makeConfig());
+    const headersService = new HeadersService(undefined, true);
+    const wsHandler = new WebSocketHandler(httpHandler, headersService);
+    const harness = await bindHarness(wsHandler);
+
+    const { socket, head } = await upgrade(harness.port, '/no-match');
+    expect(head).toContain('502');
+    await vi.waitFor(() => expect(harness.rejections).toHaveLength(1));
+    expect(harness.rejections[0].message).toMatch(/No matching route/);
+
+    socket.destroy();
+    await harness.close();
+  });
+
+  it('rejects with 502 on the wire when route has no upstreams', async () => {
     const config = makeConfig({
       routes: [{ match: '/ws', upstreams: [] }],
     });
     const httpHandler = new HttpHandler(config);
     const headersService = new HeadersService(undefined, true);
     const wsHandler = new WebSocketHandler(httpHandler, headersService);
+    const harness = await bindHarness(wsHandler);
 
-    const proxyServer = http.createServer();
-    proxyServer.on('upgrade', (req, socket, head) => {
-      wsHandler.upgrade(req, socket as net.Socket, head);
-    });
-    await new Promise<void>((r) => proxyServer.listen(0, '127.0.0.1', r));
-    const proxyPort = (proxyServer.address() as net.AddressInfo).port;
-
-    const { socket, head } = await upgrade(proxyPort, '/ws/chat');
+    const { socket, head } = await upgrade(harness.port, '/ws/chat');
     expect(head).toContain('502');
+    await vi.waitFor(() => expect(harness.rejections).toHaveLength(1));
+    expect(harness.rejections[0].message).toMatch(/No upstreams/);
 
     socket.destroy();
-    await new Promise<void>((r) => proxyServer.close(() => r()));
+    await harness.close();
   });
 
-  it('calls notifyError when upstream connection fails', async () => {
+  it('rejects when the upstream connection fails', async () => {
+    const port = await refusedPort();
     const config = makeConfig({
       routes: [
         {
           match: '/ws',
-          upstreams: [{ host: '127.0.0.1', port: 1 }], // nothing listening
+          upstreams: [{ host: '127.0.0.1', port }],
         },
       ],
     });
     const httpHandler = new HttpHandler(config);
-    const notifySpy = vi.spyOn(httpHandler, 'notifyError');
     const headersService = new HeadersService(undefined, true);
     const wsHandler = new WebSocketHandler(httpHandler, headersService);
-
-    const proxyServer = http.createServer();
-    proxyServer.on('upgrade', (req, socket, head) => {
-      wsHandler.upgrade(req, socket as net.Socket, head);
-    });
-    await new Promise<void>((r) => proxyServer.listen(0, '127.0.0.1', r));
-    const proxyPort = (proxyServer.address() as net.AddressInfo).port;
+    const harness = await bindHarness(wsHandler);
 
     const socket = net.createConnection(
-      { host: '127.0.0.1', port: proxyPort },
+      { host: '127.0.0.1', port: harness.port },
       () => {
         socket.write(
-          `GET /ws/chat HTTP/1.1\r\nHost: 127.0.0.1:${proxyPort}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n`,
+          `GET /ws/chat HTTP/1.1\r\nHost: 127.0.0.1:${harness.port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n`,
         );
       },
     );
 
-    // Wait for the error to propagate
-    await new Promise((r) => setTimeout(r, 500));
-    expect(notifySpy).toHaveBeenCalled();
+    await vi.waitFor(() => expect(harness.rejections).toHaveLength(1));
+    expect(harness.rejections[0].message).toMatch(/ECONNREFUSED|connect/i);
 
     socket.destroy();
-    await new Promise<void>((r) => proxyServer.close(() => r()));
+    await harness.close();
   });
 
   it('applies path rewrite rules for WebSocket upgrades', async () => {
@@ -213,20 +246,12 @@ describe('WebSocketHandler', () => {
     const httpHandler = new HttpHandler(config);
     const headersService = new HeadersService(undefined, true);
     const wsHandler = new WebSocketHandler(httpHandler, headersService);
+    const harness = await bindHarness(wsHandler);
 
-    const proxyServer = http.createServer();
-    proxyServer.on('upgrade', (req, socket, head) => {
-      wsHandler.upgrade(req, socket as net.Socket, head);
-    });
-
-    await new Promise<void>((r) => proxyServer.listen(0, '127.0.0.1', r));
-    const proxyPort = (proxyServer.address() as net.AddressInfo).port;
-
-    const { socket, head } = await upgrade(proxyPort, '/v1/chat');
+    const { socket, head } = await upgrade(harness.port, '/v1/chat');
     expect(head).toContain('101');
 
     socket.destroy();
-
-    await new Promise<void>((r) => proxyServer.close(() => r()));
+    await harness.close();
   });
 });

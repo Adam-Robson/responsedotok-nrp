@@ -17,19 +17,6 @@ export async function loadConfig(filePath: string): Promise<ConfigType> {
   ) {
     const module = (await import(absolutePath)) as { default?: ConfigType };
     c = module.default ?? module;
-  } else if (extension === '.env') {
-    const envConfig = await fs.readFile(absolutePath, 'utf-8');
-    const parsed = Object.fromEntries(
-      envConfig
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith('#'))
-        .map((line) => {
-          const [key, ...rest] = line.split('=');
-          return [key, rest.join('=')];
-        }),
-    );
-    c = parsed;
   } else {
     throw new Error(`Unsupported config file extension: ${extension}`);
   }

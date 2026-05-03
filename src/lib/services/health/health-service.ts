@@ -12,6 +12,7 @@ import type { Upstream } from '../../types/upstream.js';
 export class HealthService {
   private readonly unhealthy: Set<string> = new Set();
   private readonly timers: ReturnType<typeof setInterval>[] = [];
+  private started = false;
 
   constructor(
     private readonly upstreams: Upstream[],
@@ -20,6 +21,8 @@ export class HealthService {
   ) {}
 
   start(): void {
+    if (this.started) return;
+    this.started = true;
     for (const u of this.upstreams) {
       this.probe(u);
       const timer = setInterval(() => this.probe(u), this.interval);
@@ -33,6 +36,7 @@ export class HealthService {
       clearInterval(t);
     }
     this.timers.length = 0;
+    this.started = false;
   }
 
   isHealthy(u: Upstream): boolean {

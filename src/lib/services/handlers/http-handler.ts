@@ -14,23 +14,28 @@ import { HealthService } from '../health/health-service.js';
 import { createBalancer } from '../load-balancers/create-balancer.js';
 import type { LoadBalancer } from '../load-balancers/load-balancer.js';
 
-/**
- * HTTP handler responsible for processing incoming HTTP requests, performing load balancing, and forwarding requests to upstream servers. It also integrates health checks and supports hooks for request/response lifecycle events.
- */
+const RETRY_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 export class HttpHandler {
   private readonly balancers = new Map<object, LoadBalancer>();
   private readonly globalBalancer: LoadBalancer;
   private readonly httpAgent = new http.Agent({ keepAlive: true });
   private readonly httpsAgent = new https.Agent({ keepAlive: true });
   private readonly healthService: HealthService;
+  private readonly headersService: HeadersService;
 
   constructor(
     readonly config: ConfigType,
     private readonly hooks: Hooks = {},
+    headersService?: HeadersService,
   ) {
     this.globalBalancer = createBalancer(
       config.balancer ?? LoadBalancerStrategy.RoundRobin,
     );
+
+    this.headersService =
+      headersService ??
+      new HeadersService(config.headers, config.forwardIp ?? true);
 
     const allUpstreams = [
       ...new Map(
@@ -75,9 +80,16 @@ export class HttpHandler {
     }
 
     const candidates = this.healthyCandidates(route.upstreams);
+    if (candidates.length === 0) {
+      this.handleError(
+        new Error(`No upstreams configured for route '${pathname}'`),
+        { req, route },
+        res,
+      );
+      return;
+    }
 
     const balancer = this.getBalancer(route);
-
     const upstream = balancer.pick(candidates);
 
     const targetPath =
@@ -85,7 +97,6 @@ export class HttpHandler {
 
     const ctx: Context = { req, res, route, upstream, targetPath };
 
-    // onRequest hook - abort if it returns false
     if (this.hooks.onRequest) {
       try {
         const proceed = await this.hooks.onRequest({
@@ -115,15 +126,9 @@ export class HttpHandler {
       const { req, res, upstream, targetPath, route } = ctx;
 
       const protocol = upstream.protocol ?? 'http';
-
       const transport = protocol === 'https' ? https : http;
 
-      const hs = new HeadersService(
-        this.config.headers,
-        this.config.forwardIp ?? true,
-      );
-
-      const forwardHeaders = hs.buildRequestHeaders(
+      const forwardHeaders = this.headersService.buildRequestHeaders(
         req,
         route.headers,
         upstream,
@@ -142,12 +147,11 @@ export class HttpHandler {
       const proxyReq = transport.request(options, (proxyRes) => {
         res.statusCode = proxyRes.statusCode ?? 502;
 
-        // Forward upstream response headers to client
         for (const [k, v] of Object.entries(proxyRes.headers)) {
           if (v !== undefined) res.setHeader(k, v);
         }
 
-        hs.applyResponseHeaders(res, route.headers);
+        this.headersService.applyResponseHeaders(res, route.headers);
 
         proxyRes.on('error', (err) => {
           this.handleError(err, ctx, res);
@@ -184,7 +188,9 @@ export class HttpHandler {
         );
         resolve();
       });
+
       let bodyTooLarge = false;
+      let bodyConsumed = false;
 
       proxyReq.on('error', (err) => {
         if (bodyTooLarge) {
@@ -193,11 +199,9 @@ export class HttpHandler {
           return;
         }
 
-        if (!res.headersSent) {
-          // Mark current upstream as tried before selecting the next candidate
+        if (!res.headersSent && this.canRetry(req, bodyConsumed)) {
           tried.add(upstream);
 
-          // Prefer healthy remaining candidates, fall back to any remaining
           const remaining = route.upstreams.filter((u) => !tried.has(u));
           const healthyRemaining = remaining.filter((u) =>
             this.healthService.isHealthy(u),
@@ -224,20 +228,36 @@ export class HttpHandler {
       });
 
       const maxBodySize = route.maxBodySize ?? this.config.maxBodySize;
-      if (maxBodySize !== undefined) {
-        let bodyBytes = 0;
-        req.on('data', (chunk: Buffer) => {
-          bodyBytes += chunk.length;
-          if (!bodyTooLarge && bodyBytes > maxBodySize) {
-            bodyTooLarge = true;
-            req.resume();
-            proxyReq.destroy();
-          }
-        });
-      }
+      let bodyBytes = 0;
+      req.on('data', (chunk: Buffer) => {
+        bodyConsumed = true;
+        if (maxBodySize === undefined) return;
+        bodyBytes += chunk.length;
+        if (!bodyTooLarge && bodyBytes > maxBodySize) {
+          bodyTooLarge = true;
+          req.resume();
+          proxyReq.destroy();
+        }
+      });
 
       req.pipe(proxyReq, { end: true });
     });
+  }
+
+  /**
+   * Retry is only safe when the upstream connection failed before any
+   * request body was streamed. For idempotent methods with no body the
+   * retry is a no-op replay; for others the body has been consumed by
+   * the first pipe and cannot be re-sent.
+   */
+  private canRetry(req: IncomingMessage, bodyConsumed: boolean): boolean {
+    if (bodyConsumed) return false;
+    const method = (req.method ?? 'GET').toUpperCase();
+    if (!RETRY_SAFE_METHODS.has(method)) return false;
+    const cl = req.headers['content-length'];
+    if (cl !== undefined && cl !== '0') return false;
+    if (req.headers['transfer-encoding']) return false;
+    return true;
   }
 
   healthyCandidates(upstreams: Upstream[]): Upstream[] {
@@ -258,14 +278,6 @@ export class HttpHandler {
       );
     }
     return this.balancers.get(route) ?? this.globalBalancer;
-  }
-
-  /**
-   * Notify the onError hook without sending an HTTP response.
-   * Used by the WebSocket handler where there is no ServerResponse.
-   */
-  notifyError(err: Error, ctx: Partial<Context> = {}): void {
-    this.hooks.onError?.(err, ctx);
   }
 
   private handleError(

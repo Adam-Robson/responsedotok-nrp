@@ -67,10 +67,14 @@ describe('Logger', () => {
     expect(line.body.userId).toBe(42);
   });
 
-  it('defaults to debug level when no level is provided', () => {
+  it('defaults to info level when no level is provided', () => {
     const stdout = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
     const logger = new Logger();
-    logger.debug('shown');
+    logger.debug('hidden');
+    logger.info('shown');
     expect(stdout).toHaveBeenCalledOnce();
+    const line = JSON.parse(stdout.mock.calls[0]?.[0] as string);
+    expect(line.level).toBe('info');
+    expect(line.message).toBe('shown');
   });
 });

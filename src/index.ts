@@ -26,11 +26,15 @@ import { Logger } from './logger/logger.js';
  * graceful shutdown handlers.
  */
 export async function main(): Promise<void> {
-  const { configPath, logLevel, help } = parseArgs(process.argv);
+  const { configPath, logLevel, help, env, balancer } = parseArgs(process.argv);
 
   if (help) {
     printHelp();
     process.exit(0);
+  }
+
+  for (const [k, v] of Object.entries(env)) {
+    process.env[k] = v;
   }
 
   const logger = new Logger(logLevel);
@@ -40,6 +44,7 @@ export async function main(): Promise<void> {
   try {
     config = await loadConfig(configPath);
     config = applyEnvOverrides(config, envOverrides());
+    if (balancer) config = { ...config, balancer };
     logger.debug(`Config loaded from ${configPath}:`, { config: configPath });
   } catch (err) {
     logger.error(`Failed to load config from ${configPath}:`, {
