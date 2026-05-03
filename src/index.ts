@@ -19,11 +19,11 @@ import type { ConfigType } from './lib/types/config.js';
 import { Logger } from './logger/logger.js';
 
 /**
- * Reverse-proxy request handler: matches a route, picks a healthy upstream
- * via the configured load balancer, and forwards the request.
+ * CLI entrypoint for the proxy server.
  *
- * Owns the shared HTTP/HTTPS agents and the {@link HealthService} lifecycle
- * (started/stopped via {@link start}/{@link stop}).
+ * Parses command-line arguments, optionally prints help, loads configuration,
+ * applies environment overrides, starts the proxy server, and registers
+ * graceful shutdown handlers.
  */
 export async function main(): Promise<void> {
   const { configPath, logLevel, help } = parseArgs(process.argv);
